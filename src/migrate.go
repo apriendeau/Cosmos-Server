@@ -1,24 +1,25 @@
-package main 
+package main
 
 import (
+	"context"
 	"os"
 	"strings"
-	"context"
+
 	// "fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func MigratePre014Coll(collection string, from *mongo.Client) {
 	name := os.Getenv("MONGODB_NAME")
 	if name == "" {
-			name = "COSMOS"
+		name = "COSMOS"
 	}
 
 	utils.Log("Migrating collection " + collection + " from database " + name)
@@ -28,8 +29,8 @@ func MigratePre014Coll(collection string, from *mongo.Client) {
 	cf := from.Database(name).Collection(applicationId + "_" + collection)
 	ct, closeDb, err := utils.GetEmbeddedCollection(utils.GetRootAppId(), collection)
 	if err != nil {
-			utils.Error("Error getting collection " + applicationId + "_" + collection + " from database " + name, err)
-			return
+		utils.Error("Error getting collection "+applicationId+"_"+collection+" from database "+name, err)
+		return
 	}
 	defer closeDb()
 
@@ -37,8 +38,8 @@ func MigratePre014Coll(collection string, from *mongo.Client) {
 	opts := options.Find()
 	cur, err := cf.Find(context.Background(), bson.D{}, opts)
 	if err != nil {
-			utils.Error("Error getting documents from " + collection + " collection", err)
-			return
+		utils.Error("Error getting documents from "+collection+" collection", err)
+		return
 	}
 	defer cur.Close(context.Background())
 
@@ -46,34 +47,33 @@ func MigratePre014Coll(collection string, from *mongo.Client) {
 	batchSize := 100 // Define a suitable batch size
 
 	for cur.Next(context.Background()) {
-			var elem bson.D
-			if err := cur.Decode(&elem); err != nil {
-					utils.Error("Error decoding document from " + collection + " collection", err)
-					continue
-			}
+		var elem bson.D
+		if err := cur.Decode(&elem); err != nil {
+			utils.Error("Error decoding document from "+collection+" collection", err)
+			continue
+		}
 
-			batch = append(batch, elem)
+		batch = append(batch, elem)
 
-			if len(batch) >= batchSize {
-					if _, err := ct.InsertMany(context.Background(), batch); err != nil {
-							utils.Error("Error inserting batch into " + collection + " collection", err)
-					}
-					batch = batch[:0] // Clear the batch
+		if len(batch) >= batchSize {
+			if _, err := ct.InsertMany(context.Background(), batch); err != nil {
+				utils.Error("Error inserting batch into "+collection+" collection", err)
 			}
+			batch = batch[:0] // Clear the batch
+		}
 	}
 
 	// Insert any remaining documents
 	if len(batch) > 0 {
-			if _, err := ct.InsertMany(context.Background(), batch); err != nil {
-					utils.Error("Error inserting remaining documents into " + collection + " collection", err)
-			}
+		if _, err := ct.InsertMany(context.Background(), batch); err != nil {
+			utils.Error("Error inserting remaining documents into "+collection+" collection", err)
+		}
 	}
 
 	if err := cur.Err(); err != nil {
-			utils.Error("Error iterating over documents from " + collection + " collection", err)
+		utils.Error("Error iterating over documents from "+collection+" collection", err)
 	}
 }
-
 
 func MigratePre014() {
 	config := utils.GetMainConfig()
@@ -84,19 +84,19 @@ func MigratePre014() {
 
 		// connect to MongoDB
 		utils.Log("Connecting to MongoDB...")
-		
+
 		mongoURL := utils.GetMainConfig().MongoDB
 
 		var err error
 
 		opts := options.Client().ApplyURI(mongoURL).SetRetryWrites(true).SetWriteConcern(writeconcern.New(writeconcern.WMajority()))
-		
+
 		if !utils.IsInsideContainer || utils.IsHostNetwork {
 			hostname := opts.Hosts[0]
 			// split port
 			hostnameParts := strings.Split(hostname, ":")
 			hostname = hostnameParts[0]
-			port := "27017" 
+			port := "27017"
 
 			if len(hostnameParts) > 1 {
 				port = hostnameParts[1]
@@ -111,7 +111,7 @@ func MigratePre014() {
 				utils.Log("Mongo DB IP : " + ip)
 			}
 		}
-	
+
 		client, err := mongo.Connect(context.TODO(), opts)
 
 		if err != nil {
@@ -124,10 +124,10 @@ func MigratePre014() {
 		}
 
 		utils.Log("Successfully connected to the database.")
-		
+
 		ct, closeDb, err := utils.GetEmbeddedCollection(utils.GetRootAppId(), "events")
 		if err != nil {
-				return
+			return
 		}
 		defer closeDb()
 
@@ -142,11 +142,9 @@ func MigratePre014() {
 			utils.Error("Metrics - Create Index", err)
 			return // Handle error appropriately
 		}
-		
+
 		MigratePre014Coll("users", client)
 		MigratePre014Coll("devices", client)
-
-		
 
 		// Migrate DB to puppet mode
 
@@ -157,7 +155,7 @@ func MigratePre014() {
 
 			mongoContainer, err := docker.InspectContainer(utils.DBContainerName)
 			if err != nil {
-				utils.Fatal("MigratePre014 - Cannot migrate database to puppet mode, container " + utils.DBContainerName + " not found", err)
+				utils.Fatal("MigratePre014 - Cannot migrate database to puppet mode, container "+utils.DBContainerName+" not found", err)
 				return
 			}
 
@@ -194,7 +192,6 @@ func MigratePre014() {
 				return
 			}
 
-			
 			if username == "" || password == "" {
 				utils.Error("MigratePre014 - Cannot migrate database to puppet mode, credentials not found", nil)
 				MigratePre014_FallBackNoPuppet()
@@ -202,15 +199,15 @@ func MigratePre014() {
 			}
 
 			dbconfig := utils.DatabaseConfig{
-				PuppetMode: true,
-				Hostname: utils.DBContainerName,
-				DbVolume: dbVolume,
+				PuppetMode:   true,
+				Hostname:     utils.DBContainerName,
+				DbVolume:     dbVolume,
 				ConfigVolume: dbConfigVolume,
-				Version: strings.Split(currentVersion, ".")[0],
-				Username: username,
-				Password: password,
+				Version:      strings.Split(currentVersion, ".")[0],
+				Username:     username,
+				Password:     password,
 			}
-			
+
 			config.Database = dbconfig
 
 			utils.SetBaseMainConfig(config)

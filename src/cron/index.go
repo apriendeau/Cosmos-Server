@@ -1,14 +1,14 @@
 package cron
 
 import (
-	"strconv"
-	"time"
+	"bufio"
 	"context"
 	"errors"
-	"io"
-	"bufio"
-	"os/exec"
 	"fmt"
+	"io"
+	"os/exec"
+	"strconv"
+	"time"
 
 	"github.com/go-co-op/gocron/v2"
 
@@ -23,20 +23,20 @@ var CRONLock = make(chan bool, 1)
 var RunningLock = make(chan bool, 1)
 
 type ConfigJob struct {
-	Disabled bool
-	Scheduler string
-	Name string
-	Cancellable bool
-	Job func(OnLog func(string), OnFail func(error), OnSuccess func(),  ctx context.Context, cancel context.CancelFunc) `json:"-"`
-	Crontab string
-	Running bool
-	LastStarted time.Time
-	LastRun time.Time
+	Disabled       bool
+	Scheduler      string
+	Name           string
+	Cancellable    bool
+	Job            func(OnLog func(string), OnFail func(error), OnSuccess func(), ctx context.Context, cancel context.CancelFunc) `json:"-"`
+	Crontab        string
+	Running        bool
+	LastStarted    time.Time
+	LastRun        time.Time
 	LastRunSuccess bool
-	Logs []string
-	Ctx context.Context `json:"-"`
-	CancelFunc context.CancelFunc `json:"-"`
-	Container string
+	Logs           []string
+	Ctx            context.Context    `json:"-"`
+	CancelFunc     context.CancelFunc `json:"-"`
+	Container      string
 }
 
 var jobsList = map[string]map[string]ConfigJob{}
@@ -54,7 +54,7 @@ func Init() {
 	if err != nil {
 		utils.Fatal("CRON initialization", err)
 	}
-	
+
 	wasInit = true
 	InitJobs()
 	InitScheduler()
@@ -63,7 +63,7 @@ func Init() {
 func streamLogs(r io.Reader, OnLog func(string)) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-			OnLog(scanner.Text())
+		OnLog(scanner.Text())
 	}
 }
 
@@ -79,23 +79,23 @@ func JobFromCommand(command string, args ...string) func(OnLog func(string), OnF
 		// Getting the pipe for standard output
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-				OnFail(err)
-				return
+			OnFail(err)
+			return
 		}
 
 		// Getting the pipe for standard error
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-				OnFail(err)
-				return
+			OnFail(err)
+			return
 		}
 
 		utils.Debug("Running command: " + cmd.String())
-		
+
 		// Start the command
 		if err := cmd.Start(); err != nil {
-				OnFail(err)
-				return
+			OnFail(err)
+			return
 		}
 
 		// Concurrently read from stdout and stderr
@@ -105,8 +105,8 @@ func JobFromCommand(command string, args ...string) func(OnLog func(string), OnF
 		// Wait for the command to finish
 		err = cmd.Wait()
 		if err != nil {
-				OnFail(err)
-				return
+			OnFail(err)
+			return
 		}
 
 		OnSuccess()
@@ -115,70 +115,70 @@ func JobFromCommand(command string, args ...string) func(OnLog func(string), OnF
 
 func JobFromContainerCommand(containerID string, command string, args ...string) func(OnLog func(string), OnFail func(error), OnSuccess func(), ctx context.Context, cancel context.CancelFunc) {
 	return func(OnLog func(string), OnFail func(error), OnSuccess func(), ctx context.Context, cancel context.CancelFunc) {
-			// Connect to Docker
-			err := docker.Connect()
+		// Connect to Docker
+		err := docker.Connect()
+		if err != nil {
+			OnFail(err)
+			return
+		}
+
+		// Check if the container is running
+		containerJSON, err := docker.DockerClient.ContainerInspect(ctx, containerID)
+		if err != nil {
+			OnFail(err)
+			return
+		}
+
+		if !containerJSON.State.Running {
+			OnFail(fmt.Errorf("Container %s is not running", containerID))
+			return
+		}
+
+		// Create exec configuration
+		execConfig := types.ExecConfig{
+			Cmd:          append([]string{command}, args...),
+			AttachStdout: true,
+			AttachStderr: true,
+		}
+
+		// Create exec instance
+		execID, err := docker.DockerClient.ContainerExecCreate(ctx, containerID, execConfig)
+		if err != nil {
+			OnFail(err)
+			return
+		}
+
+		// Attach to exec instance
+		execAttach, err := docker.DockerClient.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{})
+		if err != nil {
+			OnFail(err)
+			return
+		}
+		defer execAttach.Close()
+
+		// Stream logs from exec
+		go streamLogs(execAttach.Reader, OnLog)
+
+		// Inspect exec process to wait for completion
+		for {
+			execInspect, err := docker.DockerClient.ContainerExecInspect(ctx, execID.ID)
 			if err != nil {
-					OnFail(err)
-					return
+				OnFail(err)
+				return
 			}
 
-			// Check if the container is running
-			containerJSON, err := docker.DockerClient.ContainerInspect(ctx, containerID)
-			if err != nil {
-					OnFail(err)
-					return
+			if !execInspect.Running {
+				if execInspect.ExitCode == 0 {
+					OnSuccess()
+				} else {
+					OnFail(fmt.Errorf("exec process exited with code %d", execInspect.ExitCode))
+				}
+				break
 			}
 
-			if !containerJSON.State.Running {
-					OnFail(fmt.Errorf("Container %s is not running", containerID))
-					return
-			}
-
-			// Create exec configuration
-			execConfig := types.ExecConfig{
-					Cmd:          append([]string{command}, args...),
-					AttachStdout: true,
-					AttachStderr: true,
-			}
-
-			// Create exec instance
-			execID, err := docker.DockerClient.ContainerExecCreate(ctx, containerID, execConfig)
-			if err != nil {
-					OnFail(err)
-					return
-			}
-
-			// Attach to exec instance
-			execAttach, err := docker.DockerClient.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{})
-			if err != nil {
-					OnFail(err)
-					return
-			}
-			defer execAttach.Close()
-
-			// Stream logs from exec
-			go streamLogs(execAttach.Reader, OnLog)
-
-			// Inspect exec process to wait for completion
-			for {
-					execInspect, err := docker.DockerClient.ContainerExecInspect(ctx, execID.ID)
-					if err != nil {
-							OnFail(err)
-							return
-					}
-
-					if !execInspect.Running {
-							if execInspect.ExitCode == 0 {
-									OnSuccess()
-							} else {
-									OnFail(fmt.Errorf("exec process exited with code %d", execInspect.ExitCode))
-							}
-							break
-					}
-
-					// Don't spam the API
-					time.Sleep(500 * time.Millisecond)
-			}
+			// Don't spam the API
+			time.Sleep(500 * time.Millisecond)
+		}
 	}
 }
 
@@ -190,7 +190,7 @@ func InitJobs() {
 
 	// copy jobsList
 	resetScheduler("Custom")
-	
+
 	config := utils.GetMainConfig()
 	configJobsList := config.CRON
 
@@ -202,17 +202,17 @@ func InitJobs() {
 		}
 
 		j := ConfigJob{
-			Scheduler: "Custom",
-			Name: job.Name,
-			Job: cmd,
-			Crontab: job.Crontab,
-			Running: false,
+			Scheduler:   "Custom",
+			Name:        job.Name,
+			Job:         cmd,
+			Crontab:     job.Crontab,
+			Running:     false,
 			Cancellable: true,
-			LastRun: time.Time{},
+			LastRun:     time.Time{},
 			LastStarted: time.Time{},
-			Logs: []string{},
-			Disabled: !job.Enabled,
-			Container: job.Container,
+			Logs:        []string{},
+			Disabled:    !job.Enabled,
+			Container:   job.Container,
 		}
 
 		if CustomScheduler, ok := jobsList["Custom"]; ok {
@@ -232,13 +232,13 @@ func InitJobs() {
 }
 
 func jobRunner(schedulerName, jobName string) func(OnLog func(string), OnFail func(error), OnSuccess func()) {
-	return func (OnLog func(string), OnFail func(error), OnSuccess func()) {
+	return func(OnLog func(string), OnFail func(error), OnSuccess func()) {
 		CRONLock <- true
 		if job, ok := jobsList[schedulerName][jobName]; ok {
 			utils.Log("Starting CRON job: " + job.Name)
 
 			if job.Running {
-				utils.Error("Scheduler: job " + job.Name + " is already running", nil)
+				utils.Error("Scheduler: job "+job.Name+" is already running", nil)
 				<-CRONLock
 				return
 			}
@@ -256,14 +256,14 @@ func jobRunner(schedulerName, jobName string) func(OnLog func(string), OnFail fu
 			triggerJobUpdated("start", job.Name)
 
 			select {
-				case <-ctx.Done():
-					OnFail(errors.New("Scheduler: job was canceled."))
-					return
-				default:
-					job.Job(OnLog, OnFail, OnSuccess, ctx, cancel)
+			case <-ctx.Done():
+				OnFail(errors.New("Scheduler: job was canceled."))
+				return
+			default:
+				job.Job(OnLog, OnFail, OnSuccess, ctx, cancel)
 			}
 		} else {
-			utils.Error("Scheduler: job " + jobName + " not found", nil)
+			utils.Error("Scheduler: job "+jobName+" not found", nil)
 			<-CRONLock
 		}
 	}
@@ -292,7 +292,7 @@ func jobRunner_OnFail(schedulerName, jobName string) func(err error) {
 			job.Running = false
 			jobsList[job.Scheduler][job.Name] = job
 			triggerJobUpdated("fail", job.Name, err.Error())
-			utils.MajorError("CRON job " + job.Name + " failed", err)
+			utils.MajorError("CRON job "+job.Name+" failed", err)
 		}
 		<-CRONLock
 	}
@@ -314,13 +314,13 @@ func jobRunner_OnSuccess(schedulerName, jobName string) func() {
 
 func InitScheduler() {
 	var err error
-	
+
 	if !wasInit {
 		return
 	}
 
 	utils.Log("Initializing CRON jobs to scheduler...")
-	
+
 	CRONLock <- true
 	defer func() { <-CRONLock }()
 
@@ -357,7 +357,7 @@ func InitScheduler() {
 	}
 
 	// start
-	
+
 	go func() {
 		scheduler.Start()
 		utils.Log("CRON scheduler started with " + strconv.Itoa(count) + " jobs")
@@ -382,7 +382,7 @@ func CancelJob(scheduler string, jobName string) error {
 	defer func() { <-CRONLock }()
 
 	utils.Log("Canceling CRON job: " + jobName)
-	
+
 	return cancelJob(scheduler, jobName)
 }
 
@@ -398,7 +398,7 @@ func registerJob(job ConfigJob) {
 }
 func RegisterJob(job ConfigJob) {
 	CRONLock <- true
-	
+
 	registerJob(job)
 
 	<-CRONLock
@@ -413,7 +413,7 @@ func resetScheduler(scheduler string) {
 }
 func ResetScheduler(scheduler string) {
 	CRONLock <- true
-	
+
 	resetScheduler(scheduler)
 
 	<-CRONLock
@@ -445,20 +445,19 @@ func ManualRunJob(scheduler string, name string) error {
 		})()
 	} else {
 		<-CRONLock
-		utils.Error("CRON job " + name + " not found", nil)
+		utils.Error("CRON job "+name+" not found", nil)
 		return errors.New("CRON job not found")
 	}
-	
+
 	return nil
 }
-
 
 func RunOneTimeJob(job ConfigJob) {
 	CRONLock <- true
 
 	job.Scheduler = "__OT__" + job.Scheduler
 	job.Name = job.Name + " #" + strconv.FormatInt(time.Now().Unix(), 10)
-	
+
 	// create scheduler if not exists
 	if _, ok := jobsList[job.Scheduler]; !ok {
 		jobsList[job.Scheduler] = map[string]ConfigJob{}
@@ -480,7 +479,7 @@ func AddJobConfig(job utils.CRONConfig) {
 	config := utils.ReadConfigFromFile()
 	config.CRON[job.Name] = job
 	utils.SetBaseMainConfig(config)
-	
+
 	utils.TriggerEvent(
 		"cosmos.settings",
 		"Settings updated",
@@ -488,7 +487,7 @@ func AddJobConfig(job utils.CRONConfig) {
 		"",
 		map[string]interface{}{
 			"from": "Added CRON job",
-	})
+		})
 
 	InitJobs()
 	InitScheduler()
@@ -500,7 +499,7 @@ func RemoveJobConfig(name string) {
 	config := utils.ReadConfigFromFile()
 	delete(config.CRON, name)
 	utils.SetBaseMainConfig(config)
-	
+
 	utils.TriggerEvent(
 		"cosmos.settings",
 		"Settings updated",
@@ -508,7 +507,7 @@ func RemoveJobConfig(name string) {
 		"",
 		map[string]interface{}{
 			"from": "Removed CRON job",
-	})
+		})
 
 	InitJobs()
 	InitScheduler()

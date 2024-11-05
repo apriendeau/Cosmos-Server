@@ -1,27 +1,25 @@
 package constellation
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 var NebulaDefaultConfig utils.NebulaConfig
 
 func InitConfig() {
-	NebulaDefaultConfig = utils.NebulaConfig {
+	NebulaDefaultConfig = utils.NebulaConfig{
 		PKI: struct {
-			CA   string `yaml:"ca"`
-			Cert string `yaml:"cert"`
-			Key  string `yaml:"key"`
+			CA        string   `yaml:"ca"`
+			Cert      string   `yaml:"cert"`
+			Key       string   `yaml:"key"`
 			Blocklist []string `yaml:"blocklist"`
 		}{
-			CA:   utils.CONFIGFOLDER + "ca.crt",
-			Cert: utils.CONFIGFOLDER + "cosmos.crt",
-			Key:  utils.CONFIGFOLDER + "cosmos.key",
+			CA:        utils.CONFIGFOLDER + "ca.crt",
+			Cert:      utils.CONFIGFOLDER + "cosmos.crt",
+			Key:       utils.CONFIGFOLDER + "cosmos.key",
 			Blocklist: []string{},
 		},
-		StaticHostMap: map[string][]string{
-			
-		},
+		StaticHostMap: map[string][]string{},
 		Lighthouse: struct {
 			AMLighthouse bool     `yaml:"am_lighthouse"`
 			Interval     int      `yaml:"interval"`
@@ -39,39 +37,39 @@ func InitConfig() {
 			Port: 4242,
 		},
 		Punchy: struct {
-			Punch bool `yaml:"punch"`
+			Punch   bool `yaml:"punch"`
 			Respond bool `yaml:"respond"`
 		}{
-			Punch: true,
+			Punch:   true,
 			Respond: true,
 		},
 		Relay: struct {
-			AMRelay   bool `yaml:"am_relay"`
-			UseRelays bool `yaml:"use_relays"`
-			Relays		[]string `yaml:"relays"`
+			AMRelay   bool     `yaml:"am_relay"`
+			UseRelays bool     `yaml:"use_relays"`
+			Relays    []string `yaml:"relays"`
 		}{
 			AMRelay:   true,
 			UseRelays: false,
 			Relays:    []string{},
 		},
 		TUN: struct {
-			Disabled            bool     `yaml:"disabled"`
-			Dev                 string   `yaml:"dev"`
+			Disabled           bool     `yaml:"disabled"`
+			Dev                string   `yaml:"dev"`
 			DropLocalBroadcast bool     `yaml:"drop_local_broadcast"`
-			DropMulticast       bool     `yaml:"drop_multicast"`
-			TxQueue             int      `yaml:"tx_queue"`
-			MTU                 int      `yaml:"mtu"`
-			Routes              []string `yaml:"routes"`
-			UnsafeRoutes        []string `yaml:"unsafe_routes"`
+			DropMulticast      bool     `yaml:"drop_multicast"`
+			TxQueue            int      `yaml:"tx_queue"`
+			MTU                int      `yaml:"mtu"`
+			Routes             []string `yaml:"routes"`
+			UnsafeRoutes       []string `yaml:"unsafe_routes"`
 		}{
-			Disabled:            false,
-			Dev:                 "nebula1",
+			Disabled:           false,
+			Dev:                "nebula1",
 			DropLocalBroadcast: false,
-			DropMulticast:       false,
-			TxQueue:             500,
-			MTU:                 1300,
-			Routes:              nil,
-			UnsafeRoutes:        nil,
+			DropMulticast:      false,
+			TxQueue:            500,
+			MTU:                1300,
+			Routes:             nil,
+			UnsafeRoutes:       nil,
 		},
 		Logging: struct {
 			Level  string `yaml:"level"`
@@ -81,8 +79,8 @@ func InitConfig() {
 			Format: "text",
 		},
 		Firewall: struct {
-			OutboundAction string                    `yaml:"outbound_action"`
-			InboundAction  string                    `yaml:"inbound_action"`
+			OutboundAction string                      `yaml:"outbound_action"`
+			InboundAction  string                      `yaml:"inbound_action"`
 			Conntrack      utils.NebulaConntrackConfig `yaml:"conntrack"`
 			Outbound       []utils.NebulaFirewallRule  `yaml:"outbound"`
 			Inbound        []utils.NebulaFirewallRule  `yaml:"inbound"`
@@ -94,17 +92,17 @@ func InitConfig() {
 				UDPTimeout:     "3m",
 				DefaultTimeout: "10m",
 			},
-			Outbound: []utils.NebulaFirewallRule {
-				utils.NebulaFirewallRule {
-					Host: "any",
-					Port: "any",
+			Outbound: []utils.NebulaFirewallRule{
+				utils.NebulaFirewallRule{
+					Host:  "any",
+					Port:  "any",
 					Proto: "any",
 				},
 			},
-			Inbound: []utils.NebulaFirewallRule {
-				utils.NebulaFirewallRule {
-					Host: "any",
-					Port: "any",
+			Inbound: []utils.NebulaFirewallRule{
+				utils.NebulaFirewallRule{
+					Host:  "any",
+					Port:  "any",
 					Proto: "any",
 				},
 			},

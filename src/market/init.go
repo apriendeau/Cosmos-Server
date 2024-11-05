@@ -1,7 +1,7 @@
-package market 
+package market
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func Init() {
@@ -14,7 +14,7 @@ func Init() {
 	for _, source := range sources {
 		inConfig[source.Name] = true
 	}
-	
+
 	if currentMarketcache == nil {
 		currentMarketcache = []marketCacheObject{}
 	}
@@ -42,7 +42,7 @@ func Init() {
 
 	// prepend the default market
 	defaultMarket := utils.MarketSource{
-		Url: "https://azukaar.github.io/cosmos-servapps-official/index.json",
+		Url:  "https://azukaar.github.io/cosmos-servapps-official/index.json",
 		Name: "cosmos-cloud",
 	}
 
@@ -52,7 +52,7 @@ func Init() {
 		// add markets that are in config but not in cache
 		if !inCache[marketDef.Name] {
 			market := marketCacheObject{
-				Url: marketDef.Url,
+				Url:  marketDef.Url,
 				Name: marketDef.Name,
 			}
 

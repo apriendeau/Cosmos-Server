@@ -1,12 +1,12 @@
-package storage 
+package storage
 
 import (
-	"os"
 	"errors"
+	"os"
 	"strings"
-	
-	"github.com/azukaar/cosmos-server/src/utils"
+
 	"github.com/azukaar/cosmos-server/src/cron"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func findParent(disks []BlockDevice, path string) (BlockDevice, error) {
@@ -27,9 +27,9 @@ func findParent(disks []BlockDevice, path string) (BlockDevice, error) {
 func CreateSnapRAID(raidOptions utils.SnapRAIDConfig, editRaid string) error {
 	data := raidOptions.Data
 	parity := raidOptions.Parity
-	
+
 	// utils.Log("[STORAGE] Create SnapRAID " + strings.Join(data, ":") + " with " + strings.Join(data, ":"))
-	
+
 	// make sure name is at least 3 characters and contains only letters and numbers
 	if len(raidOptions.Name) < 3 || strings.ContainsAny(raidOptions.Name, "./!?@#$%^&*()_+=-{}[]|\\:;\"'<>,") {
 		return errors.New("Name must be at least 3 characters and contain only letters and numbers")
@@ -119,7 +119,7 @@ func CreateSnapRAID(raidOptions utils.SnapRAIDConfig, editRaid string) error {
 		}
 	}
 
-	// save to config 
+	// save to config
 	config := utils.ReadConfigFromFile()
 	// remove the old one
 	if editRaid != "" {
@@ -134,7 +134,7 @@ func CreateSnapRAID(raidOptions utils.SnapRAIDConfig, editRaid string) error {
 	// add the new one
 	config.Storage.SnapRAIDs = append(config.Storage.SnapRAIDs, raidOptions)
 	utils.SetBaseMainConfig(config)
-	
+
 	utils.TriggerEvent(
 		"cosmos.settings",
 		"Settings updated",
@@ -142,7 +142,7 @@ func CreateSnapRAID(raidOptions utils.SnapRAIDConfig, editRaid string) error {
 		"",
 		map[string]interface{}{
 			"from": "SnapRAID configuration created",
-	})
+		})
 
 	InitSnapRAIDConfig()
 
@@ -154,8 +154,7 @@ func DeleteSnapRAID(name string) error {
 	defer utils.ConfigLock.Unlock()
 
 	os.Remove(utils.CONFIGFOLDER + "snapraid/" + name + ".conf")
-	
-	
+
 	config := utils.ReadConfigFromFile()
 	for i, r := range config.Storage.SnapRAIDs {
 		if r.Name == name {
@@ -182,17 +181,17 @@ func InitSnapRAIDConfig() {
 
 	// reset the scheduler
 	cron.ResetScheduler("SnapRAID")
-	
+
 	// remove the folder if it exists
 	if _, err := os.Stat(utils.CONFIGFOLDER + "snapraid"); err == nil {
 		os.RemoveAll(utils.CONFIGFOLDER + "snapraid")
 	}
 
-	os.MkdirAll(utils.CONFIGFOLDER + "snapraid", 0755)
+	os.MkdirAll(utils.CONFIGFOLDER+"snapraid", 0755)
 
 	for _, raidOptions := range snaps {
 		// create or overwrite the file
-		file, err := os.OpenFile(utils.CONFIGFOLDER + "snapraid/" + raidOptions.Name + ".conf", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(utils.CONFIGFOLDER+"snapraid/"+raidOptions.Name+".conf", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			utils.MajorError("Failed to create SnapRAID config file", err)
 			return
@@ -205,30 +204,30 @@ func InitSnapRAIDConfig() {
 		}
 
 		// file.WriteString("content " + utils.CONFIGFOLDER + "snapraid/" + raidOptions.Name + ".conf\n")
-		
+
 		for name, d := range raidOptions.Data {
 			file.WriteString("content " + d + "/snapraid.content\n")
 			file.WriteString("data " + name + " " + d + "\n")
 		}
-		
+
 		// Init scheduler
-		
+
 		cron.RegisterJob(cron.ConfigJob{
-			Scheduler: "SnapRAID",
-			Name: "SnapRAID sync " + raidOptions.Name,
-			Crontab: raidOptions.SyncCrontab,
+			Scheduler:   "SnapRAID",
+			Name:        "SnapRAID sync " + raidOptions.Name,
+			Crontab:     raidOptions.SyncCrontab,
 			Cancellable: true,
-			Job: cron.JobFromCommand("snapraid", "sync", "-c", utils.CONFIGFOLDER + "snapraid/" + raidOptions.Name + ".conf"),
+			Job:         cron.JobFromCommand("snapraid", "sync", "-c", utils.CONFIGFOLDER+"snapraid/"+raidOptions.Name+".conf"),
 		})
-		
+
 		cron.RegisterJob(cron.ConfigJob{
-			Scheduler: "SnapRAID",
-			Name: "SnapRAID scrub " + raidOptions.Name,
-			Crontab: raidOptions.ScrubCrontab,
+			Scheduler:   "SnapRAID",
+			Name:        "SnapRAID scrub " + raidOptions.Name,
+			Crontab:     raidOptions.ScrubCrontab,
 			Cancellable: true,
-			Job: cron.JobFromCommand("snapraid", "scrub", "-c", utils.CONFIGFOLDER + "snapraid/" + raidOptions.Name + ".conf"),
+			Job:         cron.JobFromCommand("snapraid", "scrub", "-c", utils.CONFIGFOLDER+"snapraid/"+raidOptions.Name+".conf"),
 		})
-	}	
+	}
 }
 
 func ToggleSnapRAID(name string, enable bool) error {
@@ -249,7 +248,7 @@ func ToggleSnapRAID(name string, enable bool) error {
 
 func RunSnapRAIDSync(raid utils.SnapRAIDConfig) error {
 	utils.Log("[STORAGE] Running SnapRAID sync for " + raid.Name)
-	cron.ManualRunJob("SnapRAID", "SnapRAID sync " + raid.Name)
+	cron.ManualRunJob("SnapRAID", "SnapRAID sync "+raid.Name)
 
 	return nil
 }
@@ -258,27 +257,27 @@ func RunSnapRAIDFix(raid utils.SnapRAIDConfig) error {
 	utils.Log("[STORAGE] Running SnapRAID fix for " + raid.Name)
 
 	cron.RunOneTimeJob(cron.ConfigJob{
-		Scheduler: "SnapRAID",
-		Name: "SnapRAID fix " + raid.Name,
+		Scheduler:   "SnapRAID",
+		Name:        "SnapRAID fix " + raid.Name,
 		Cancellable: true,
-		Job: cron.JobFromCommand("snapraid", "fix", "-c", utils.CONFIGFOLDER + "snapraid/" + raid.Name + ".conf"),
+		Job:         cron.JobFromCommand("snapraid", "fix", "-c", utils.CONFIGFOLDER+"snapraid/"+raid.Name+".conf"),
 	})
 
 	return nil
 }
 
-func RunSnapRAIDScrub(raid utils.SnapRAIDConfig) error  {
+func RunSnapRAIDScrub(raid utils.SnapRAIDConfig) error {
 	utils.Log("[STORAGE] Running SnapRAID scrub for " + raid.Name)
-	cron.ManualRunJob("SnapRAID", "SnapRAID scrub " + raid.Name)
+	cron.ManualRunJob("SnapRAID", "SnapRAID scrub "+raid.Name)
 
 	return nil
 }
 
-func RunSnapRAIDStatus(raid utils.SnapRAIDConfig) (string, error)  {
-	out, err := utils.Exec("snapraid", "status", "-c", utils.CONFIGFOLDER + "snapraid/" + raid.Name + ".conf")
+func RunSnapRAIDStatus(raid utils.SnapRAIDConfig) (string, error) {
+	out, err := utils.Exec("snapraid", "status", "-c", utils.CONFIGFOLDER+"snapraid/"+raid.Name+".conf")
 
 	if err != nil {
-		utils.MajorError("Failed to status " + raid.Name, err)
+		utils.MajorError("Failed to status "+raid.Name, err)
 		return "", err
 	}
 

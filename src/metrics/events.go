@@ -1,8 +1,8 @@
-package metrics 
+package metrics
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -13,22 +13,22 @@ import (
 )
 
 type Event struct {
-	Id primitive.ObjectID `json:"id" bson:"_id"`
-	Label string `json:"label" bson:"label"`
-	Application string `json:"application" bson:"application"`
-	EventId string `json:"eventId" bson:"eventId"`
-	Date time.Time `json:"date" bson:"date"`
-	Level string `json:"level" bson:"level"`
-	Data map[string]interface{} `json:"data" bson:"data"`
-	Object string `json:"object" bson:"object"`
+	Id          primitive.ObjectID     `json:"id" bson:"_id"`
+	Label       string                 `json:"label" bson:"label"`
+	Application string                 `json:"application" bson:"application"`
+	EventId     string                 `json:"eventId" bson:"eventId"`
+	Date        time.Time              `json:"date" bson:"date"`
+	Level       string                 `json:"level" bson:"level"`
+	Data        map[string]interface{} `json:"data" bson:"data"`
+	Object      string                 `json:"object" bson:"object"`
 }
 
 func API_ListEvents(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
 		return
 	}
-	
-	if(req.Method == "GET") {
+
+	if req.Method == "GET" {
 
 		query := req.URL.Query()
 		from, errF := time.Parse("2006-01-02T15:04:05Z", query.Get("from"))
@@ -58,7 +58,7 @@ func API_ListEvents(w http.ResponseWriter, req *http.Request) {
 		if dbQuery != "" {
 			err := bson.UnmarshalExtJSON([]byte(dbQuery), true, &dbQueryBson)
 			if err != nil {
-				utils.Error("events: Error while parsing query " + dbQuery, err)
+				utils.Error("events: Error while parsing query "+dbQuery, err)
 				utils.HTTPError(w, "events Get Error", http.StatusInternalServerError, "UD001")
 				return
 			}
@@ -68,7 +68,6 @@ func API_ListEvents(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-	
 		// merge date query into dbQueryBson
 		if dbQueryBson["date"] == nil {
 			dbQueryBson["date"] = bson.M{}
@@ -100,12 +99,12 @@ func API_ListEvents(w http.ResponseWriter, req *http.Request) {
 				"$lt": pageId,
 			}
 		}
-		
+
 		c, errCo := utils.GetCollection(utils.GetRootAppId(), "events")
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		events := []Event{}
@@ -139,12 +138,12 @@ func API_ListEvents(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-				"status": "OK",
-				"total": totalCount,
-				"data":   events,
+			"status": "OK",
+			"total":  totalCount,
+			"data":   events,
 		})
 	} else {
-		utils.Error("events: Method not allowed" + req.Method, nil)
+		utils.Error("events: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

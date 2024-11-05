@@ -1,12 +1,12 @@
 package constellation
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"os"
-	"time"
-	"strings"
-	"io/ioutil"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
 )
 
 var NebulaStarted = false
@@ -28,14 +28,14 @@ func Init() {
 
 	ConstellationInitLock.Lock()
 	defer ConstellationInitLock.Unlock()
-	
+
 	NebulaStarted = false
 
 	var err error
 
 	// Debug step
 	utils.GetAllTunnelHostnames()
-	
+
 	// if Constellation is enabled
 	if utils.GetMainConfig().ConstellationConfig.Enabled {
 		if !utils.GetMainConfig().ConstellationConfig.SlaveMode {
@@ -50,7 +50,7 @@ func Init() {
 			}
 
 			InitConfig()
-			
+
 			utils.Log("Initializing Constellation module...")
 
 			// if no hostname yet, set default one
@@ -58,8 +58,8 @@ func Init() {
 				utils.Log("Constellation: no hostname found, setting default one...")
 				hostnames, _ := utils.ListIps(true)
 				httpHostname := utils.GetMainConfig().HTTPConfig.Hostname
-				if(utils.IsDomain(httpHostname)) {
-					hostnames = append(hostnames, "vpn." + httpHostname)
+				if utils.IsDomain(httpHostname) {
+					hostnames = append(hostnames, "vpn."+httpHostname)
 				} else if httpHostname != "127.0.0.1" && httpHostname != "localhost" {
 					hostnames = append(hostnames, httpHostname)
 				}
@@ -74,7 +74,7 @@ func Init() {
 			if _, err = os.Stat(utils.CONFIGFOLDER + "ca.crt"); os.IsNotExist(err) {
 				utils.Log("Constellation: ca.crt not found, generating...")
 				// generate ca.crt
-				
+
 				errG := generateNebulaCACert("Cosmos - " + utils.GetMainConfig().ConstellationConfig.ConstellationHostname)
 				if errG != nil {
 					utils.Error("Constellation: error while generating ca.crt", errG)
@@ -85,7 +85,7 @@ func Init() {
 			if _, err := os.Stat(utils.CONFIGFOLDER + "cosmos.crt"); os.IsNotExist(err) {
 				utils.Log("Constellation: cosmos.crt not found, generating...")
 				// generate cosmos.crt
-				_,_,_,errG := generateNebulaCert("cosmos", "192.168.201.1/24", "", true)
+				_, _, _, errG := generateNebulaCert("cosmos", "192.168.201.1/24", "", true)
 				if errG != nil {
 					utils.Error("Constellation: error while generating cosmos.crt", errG)
 				}
@@ -93,7 +93,7 @@ func Init() {
 
 			// export nebula.yml
 			utils.Log("Constellation: exporting nebula.yml...")
-			err := ExportConfigToYAML(utils.GetMainConfig().ConstellationConfig, utils.CONFIGFOLDER + "nebula.yml")
+			err := ExportConfigToYAML(utils.GetMainConfig().ConstellationConfig, utils.CONFIGFOLDER+"nebula.yml")
 
 			if err != nil {
 				utils.Error("Constellation: error while exporting nebula.yml", err)
@@ -132,7 +132,7 @@ func Init() {
 								}
 							}
 						}
-	
+
 						utils.Log("Constellation: device names cache populated")
 					}
 				}
@@ -168,12 +168,12 @@ func Init() {
 		if err != nil {
 			utils.Error("Constellation: error while starting nebula", err)
 		}
-		
+
 		if utils.GetMainConfig().ConstellationConfig.SlaveMode {
 			go (func() {
 				ConstellationInitLock.Lock()
 				defer ConstellationInitLock.Unlock()
-				
+
 				InitNATSClient()
 
 				var err error
@@ -181,7 +181,7 @@ func Init() {
 				needRestart := false
 				needRestart, err = SlaveConfigSync("")
 				for err != nil && retries < 4 {
-					time.Sleep(time.Duration(2 * (retries + 1)) * time.Second)
+					time.Sleep(time.Duration(2*(retries+1)) * time.Second)
 					needRestart, err = SlaveConfigSync("")
 					retries++
 					utils.Debug("Retrying to sync slave config")

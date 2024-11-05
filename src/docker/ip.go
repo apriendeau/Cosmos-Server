@@ -2,9 +2,9 @@ package docker
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/docker/docker/api/types"
@@ -76,9 +76,9 @@ func _getContainerIPByName(containerName string) (string, error) {
 		return "localhost", nil
 	} else if container.HostConfig.NetworkMode == "bridge" || container.HostConfig.NetworkMode == "default" || container.HostConfig.NetworkMode == "" {
 		// if container is in network mode bridge or default or not set
-		
+
 		for _, net := range container.NetworkSettings.Networks {
-			// if this network is using the bridge driver 
+			// if this network is using the bridge driver
 			if net.IPAddress != "" {
 				return net.IPAddress, nil
 			}
@@ -148,7 +148,7 @@ func DoesContainerExist(containerName string) bool {
 	}
 
 	_, err := DockerClient.ContainerInspect(DockerContext, containerName)
-	
+
 	if err != nil {
 		return false
 	}

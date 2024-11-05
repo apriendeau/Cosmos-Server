@@ -1,9 +1,9 @@
 package proxy
 
 import (
+	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/gorilla/mux"
 	"net/http"
-	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func BuildFromConfig(router *mux.Router, config utils.ProxyConfig) *mux.Router {
@@ -14,10 +14,10 @@ func BuildFromConfig(router *mux.Router, config utils.ProxyConfig) *mux.Router {
 	})
 
 	ConstellationConfig := utils.GetMainConfig().ConstellationConfig
-	
+
 	// if constellation slave
 	if ConstellationConfig.Enabled && ConstellationConfig.SlaveMode {
-		for i := len(ConstellationConfig.Tunnels)-1; i >= 0; i-- {
+		for i := len(ConstellationConfig.Tunnels) - 1; i >= 0; i-- {
 			routeConfig := ConstellationConfig.Tunnels[i]
 			if !routeConfig.Disabled {
 				RouterGen(routeConfig, router, RouteTo(routeConfig))
@@ -25,12 +25,12 @@ func BuildFromConfig(router *mux.Router, config utils.ProxyConfig) *mux.Router {
 		}
 	}
 
-	for i := len(config.Routes)-1; i >= 0; i-- {
+	for i := len(config.Routes) - 1; i >= 0; i-- {
 		routeConfig := config.Routes[i]
 		if !routeConfig.Disabled {
 			RouterGen(routeConfig, router, RouteTo(routeConfig))
 		}
 	}
-	
+
 	return router
 }

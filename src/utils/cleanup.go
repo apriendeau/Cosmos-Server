@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"time"
-	"strconv"
 	"context"
+	"strconv"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -16,9 +16,9 @@ func CleanupByDate(collectionName string) {
 	c, errCo := GetCollection(GetRootAppId(), collectionName)
 	if errCo != nil {
 		MajorError("Database Cleanup", errCo)
-			return
+		return
 	}
-	
+
 	del, err := c.DeleteMany(context.Background(), bson.M{"Date": bson.M{"$lt": time.Now().AddDate(0, -1, 0)}})
 
 	if err != nil {
@@ -27,14 +27,14 @@ func CleanupByDate(collectionName string) {
 	}
 
 	Log("Cleanup: " + collectionName + " " + strconv.Itoa(int(del.DeletedCount)) + " objects deleted")
-	
+
 	TriggerEvent(
 		"cosmos.database.cleanup",
-		"Database Cleanup of " + collectionName,
+		"Database Cleanup of "+collectionName,
 		"success",
 		"",
 		map[string]interface{}{
 			"collection": collectionName,
-			"deleted": del.DeletedCount,
-	})
+			"deleted":    del.DeletedCount,
+		})
 }

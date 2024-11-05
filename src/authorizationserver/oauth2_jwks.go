@@ -1,12 +1,12 @@
 package authorizationserver
 
 import (
-	"encoding/json"
-	"net/http"
-	"encoding/base64"
-	"math/big"
 	"crypto/rsa"
-	
+	"encoding/base64"
+	"encoding/json"
+	"math/big"
+	"net/http"
+
 	"github.com/azukaar/cosmos-server/src/utils"
 )
 

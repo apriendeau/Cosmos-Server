@@ -2,21 +2,20 @@ package utils
 
 import (
 	"context"
-	"os"
 	"errors"
+	"os"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"go.mongodb.org/mongo-driver/bson" 
 
 	lungo "github.com/256dpi/lungo"
 )
-
 
 var client *mongo.Client
 var DBContainerName string
@@ -25,27 +24,27 @@ var DBStatus bool
 func DB() error {
 	config := GetMainConfig()
 
-	if(config.DisableUserManagement)	{
+	if config.DisableUserManagement {
 		DBStatus = false
 		return errors.New("User Management is disabled")
 	}
 
 	mongoURL := config.MongoDB
-	
-	if(client != nil && client.Ping(context.TODO(), readpref.Primary()) == nil) {
+
+	if client != nil && client.Ping(context.TODO(), readpref.Primary()) == nil {
 		DBStatus = true
 		return nil
 	}
 
 	Log("(Re) Connecting to the database...")
-	
+
 	DBContainerName = ""
-	
+
 	isPuppetMode := config.Database.PuppetMode
 	puppetHostname := config.Database.Hostname
 	username := config.Database.Username
 	password := config.Database.Password
-	
+
 	if isPuppetMode {
 		mongoURL = "mongodb://" + username + ":" + password + "@" + puppetHostname + ":27017"
 		DBContainerName = puppetHostname
@@ -59,11 +58,11 @@ func DB() error {
 	var err error
 
 	opts := options.Client().
-	  SetConnectTimeout(7 * time.Second).
+		SetConnectTimeout(7 * time.Second).
 		ApplyURI(mongoURL).
 		SetRetryWrites(true).
 		SetWriteConcern(writeconcern.New(writeconcern.WMajority()))
-	
+
 	hostname := ""
 	port := "27017"
 
@@ -100,7 +99,7 @@ func DB() error {
 			DBContainerName = hostname
 		}
 	}
-	
+
 	client, err = mongo.Connect(context.TODO(), opts)
 
 	if err != nil {
@@ -145,10 +144,11 @@ func CloseEmbeddedDB() {
 
 func GetEmbeddedCollection(applicationId string, collection string) (lungo.ICollection, func(), error) {
 	opts := lungo.Options{
-		Store: lungo.NewFileStore(CONFIGFOLDER + "database", 0700),
+		Store: lungo.NewFileStore(CONFIGFOLDER+"database", 0700),
 	}
-	
-	name := os.Getenv("MONGODB_NAME"); if name == "" {
+
+	name := os.Getenv("MONGODB_NAME")
+	if name == "" {
 		name = "COSMOS"
 	}
 
@@ -167,7 +167,7 @@ func GetEmbeddedCollection(applicationId string, collection string) (lungo.IColl
 
 	// ensure engine is closed
 	// defer engine.Close()
-	
+
 	c := client.Database(name).Collection(applicationId + "_" + collection)
 
 	embeddedClient = client
@@ -187,15 +187,16 @@ func GetCollection(applicationId string, collection string) (*mongo.Collection, 
 	}
 
 	DBStatus = true
-	
-	name := os.Getenv("MONGODB_NAME"); if name == "" {
+
+	name := os.Getenv("MONGODB_NAME")
+	if name == "" {
 		name = "COSMOS"
 	}
-	
+
 	// Debug("Getting collection " + applicationId + "_" + collection + " from database " + name)
-	
+
 	c := client.Database(name).Collection(applicationId + "_" + collection)
-	
+
 	return c, nil
 }
 
@@ -275,7 +276,7 @@ func flushAllBuffers() {
 func BufferedDBWrite(collectionName string, object map[string]interface{}) {
 	bufferLock.Lock()
 	writeBuffer[collectionName] = append(writeBuffer[collectionName], object)
-	
+
 	if len(writeBuffer[collectionName]) >= bufferCapacity {
 		bufferLock.Unlock()
 		flushBuffer(collectionName)
@@ -303,13 +304,13 @@ func WriteToDatabase(collection *mongo.Collection, objects []map[string]interfac
 	return nil
 }
 
-func ListAllUsers(role string) []User { 
+func ListAllUsers(role string) []User {
 	// list all users
 	c, closeDb, errCo := GetEmbeddedCollection(GetRootAppId(), "users")
-  defer closeDb()
+	defer closeDb()
 	if errCo != nil {
-			Error("Database Connect", errCo)
-			return []User{}
+		Error("Database Connect", errCo)
+		return []User{}
 	}
 
 	users := []User{}
@@ -333,7 +334,7 @@ func ListAllUsers(role string) []User {
 		Error("Database: Error while getting users", err)
 		return []User{}
 	}
-	
+
 	if err = cursor.All(nil, &users); err != nil {
 		Error("Database: Error while decoding users", err)
 		return []User{}
@@ -358,7 +359,7 @@ func initDB() {
 			Error("Metrics - Create Index", err)
 			return // Handle error appropriately
 		}
-		
+
 		// Create a date index
 		model = mongo.IndexModel{
 			Keys: bson.M{"Date": -1},

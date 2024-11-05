@@ -1,22 +1,22 @@
 package storage
 
 import (
-	"os"
-	"errors"
-	"k8s.io/utils/mount"
-	"strings"
 	"bufio"
+	"errors"
 	"fmt"
+	"k8s.io/utils/mount"
+	"os"
+	"strings"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 type MountPoint struct {
-	Path string `json:"path"`
-	Permenant bool `json:"permenant"`
-	Device string `json:"device"`
-	Type string `json:"type"`
-	Opts []string `json:"opts"`
+	Path      string   `json:"path"`
+	Permenant bool     `json:"permenant"`
+	Device    string   `json:"device"`
+	Type      string   `json:"type"`
+	Opts      []string `json:"opts"`
 }
 
 // ListMounts lists all the mount points on the system
@@ -45,7 +45,7 @@ func ListMounts() ([]MountPoint, error) {
 
 		// if not proc or sys or dev or run
 		if !strings.HasPrefix(path, "/mnt") &&
-			 !strings.HasPrefix(path, "/var/mnt") {
+			!strings.HasPrefix(path, "/var/mnt") {
 			continue
 		}
 
@@ -53,12 +53,12 @@ func ListMounts() ([]MountPoint, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		finalMountPoints[path] = MountPoint{
-			Device: mountPoints[i].Device,
-			Path: path,
-			Type: mountPoints[i].Type,
-			Opts: mountPoints[i].Opts,
+			Device:    mountPoints[i].Device,
+			Path:      path,
+			Type:      mountPoints[i].Type,
+			Opts:      mountPoints[i].Opts,
 			Permenant: isPermenant,
 		}
 
@@ -74,8 +74,6 @@ func ListMounts() ([]MountPoint, error) {
 
 	return utils.Values(finalMountPoints), nil
 }
-
-
 
 // Mount mounts a filesystem located at 'path' to 'mountpoint'.
 func Mount(path, mountpoint string, permanent bool, chown string) error {
@@ -106,7 +104,7 @@ func Mount(path, mountpoint string, permanent bool, chown string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if chown != "" {
 		utils.Log("[STORAGE] Chowning " + mountpoint + " to " + chown)
 		out, err := utils.Exec("chown", chown, mountpoint)
@@ -118,7 +116,7 @@ func Mount(path, mountpoint string, permanent bool, chown string) error {
 
 	if permanent {
 		utils.Log("[STORAGE] Adding mountpoint to /etc/fstab")
-		
+
 		// Check if mountpoint is already in /etc/fstab
 		exists, err := isMountPointInFstab(mountpoint)
 		if err != nil {
@@ -147,7 +145,6 @@ func Mount(path, mountpoint string, permanent bool, chown string) error {
 
 	return nil
 }
-
 
 // Unmount unmounts the filesystem at 'mountpoint'.
 func Unmount(mountpoint string, permanent bool) error {
@@ -179,7 +176,6 @@ func Unmount(mountpoint string, permanent bool) error {
 
 	return nil
 }
-
 
 // isMountPointInFstab checks if the given mountpoint is already in /etc/fstab.
 func isMountPointInFstab(mountpoint string) (bool, error) {
@@ -249,4 +245,3 @@ func IsDiskMounted(diskPath string) (bool, error) {
 
 	return false, nil
 }
-

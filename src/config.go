@@ -12,11 +12,11 @@ func LoadConfig() utils.Config {
 	utils.Log("Validating config file...")
 	err := utils.Validate.Struct(config)
 	if err != nil {
-		utils.Fatal("Reading Config File: " + err.Error(), err)
+		utils.Fatal("Reading Config File: "+err.Error(), err)
 	}
 
 	utils.LoadBaseMainConfig(config)
-	
+
 	// configJson, _ := json.MarshalIndent(config, "", "  ")
 	// utils.Debug("Loaded Configuration " + (string)(configJson))
 

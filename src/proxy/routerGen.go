@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/azukaar/cosmos-server/src/user"
 	"github.com/azukaar/cosmos-server/src/constellation"
+	"github.com/azukaar/cosmos-server/src/user"
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/go-chi/httprate"
 	"github.com/gorilla/mux"
@@ -20,9 +20,9 @@ func tokenMiddleware(route utils.ProxyRouteConfig) func(next http.Handler) http.
 			adminOnly := route.AdminOnly
 
 			// bypass auth if from Constellation tunnel
-			if ((enabled && r.Header.Get("x-cosmos-user") != "") || !enabled) {
+			if (enabled && r.Header.Get("x-cosmos-user") != "") || !enabled {
 				remoteAddr, _ := utils.SplitIP(r.RemoteAddr)
-				
+
 				isTunneledIp := constellation.GetDeviceIp(route.TunnelVia) == remoteAddr
 				isConstIP := utils.IsConstellationIP(remoteAddr)
 				isConstTokenValid := constellation.CheckConstellationToken(r) == nil
@@ -35,7 +35,7 @@ func tokenMiddleware(route utils.ProxyRouteConfig) func(next http.Handler) http.
 					return
 				}
 			}
-			
+
 			r.Header.Del("x-cosmos-user")
 			r.Header.Del("x-cosmos-role")
 			r.Header.Del("x-cosmos-mfa")
@@ -94,14 +94,14 @@ func RouterGen(route utils.ProxyRouteConfig, router *mux.Router, destination htt
 	if route.UseHost {
 		origin = origin.Host(route.Host)
 	}
-	
+
 	if route.UsePathPrefix {
 		if route.PathPrefix != "" && route.PathPrefix[0] != '/' {
 			utils.Error("PathPrefix must start with a /", nil)
 		}
 		origin = origin.PathPrefix(route.PathPrefix)
 	}
-	
+
 	if route.UsePathPrefix && route.StripPathPrefix {
 		if route.PathPrefix != "" && route.PathPrefix[0] != '/' {
 			utils.Error("PathPrefix must start with a /", nil)
@@ -122,9 +122,9 @@ func RouterGen(route utils.ProxyRouteConfig, router *mux.Router, destination htt
 			utils.Error("Unknown filter type: "+route.AddionalFilters[filter].Type, nil)
 		}
 	}
-	
+
 	destination = utils.Restrictions(route.RestrictToConstellation, route.WhitelistInboundIPs)(destination)
-	
+
 	if route.BlockCommonBots {
 		destination = BotDetectionMiddleware(destination)
 	}
@@ -151,8 +151,7 @@ func RouterGen(route utils.ProxyRouteConfig, router *mux.Router, destination htt
 
 	timeout := route.Timeout
 
-	
-	if(!utils.GetMainConfig().HTTPConfig.AcceptAllInsecureHostname) {
+	if !utils.GetMainConfig().HTTPConfig.AcceptAllInsecureHostname {
 		destination = utils.EnsureHostname(destination)
 	}
 

@@ -8,7 +8,7 @@ import (
 )
 
 type migrateToHostMode struct {
-	HTTPPort string `json:"http"`
+	HTTPPort  string `json:"http"`
 	HTTPSPort string `json:"https"`
 }
 
@@ -37,14 +37,13 @@ func MigrateToHostModeRoute(w http.ResponseWriter, req *http.Request) {
 		config.HTTPConfig.HTTPPort = payload.HTTPPort
 		config.HTTPConfig.HTTPSPort = payload.HTTPSPort
 		utils.SetBaseMainConfig(config)
-		
+
 		utils.TriggerEvent(
 			"cosmos.settings",
 			"Settings updated",
 			"success",
 			"",
-			map[string]interface{}{
-		})
+			map[string]interface{}{})
 
 		err = SelfAction("host")
 		if err != nil {
@@ -52,14 +51,14 @@ func MigrateToHostModeRoute(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error migrating to host mode: "+err.Error(), http.StatusInternalServerError, "CN003")
 			return
 		}
-		
+
 		utils.SetBaseMainConfig(config)
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 		})
 	} else {
-		utils.Error("MigrateToHostMode: Method not allowed " + req.Method, nil)
+		utils.Error("MigrateToHostMode: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

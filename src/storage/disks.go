@@ -3,30 +3,30 @@ package storage
 import (
 	"fmt"
 	// "io/ioutil"
-	"strings"
-	"strconv"
-	"os/exec"
-	"io"
 	"errors"
+	"io"
+	"os/exec"
+	"strconv"
+	"strings"
 
+	"github.com/anatol/smart.go"
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/dell/csi-baremetal/pkg/base/linuxutils/lsblk"
 	"github.com/sirupsen/logrus"
-	"github.com/anatol/smart.go"
 )
 
 type SMARTData struct {
 	smart.GenericAttributes
 
 	AdditionalData interface{}
-	Thresholds interface{}
+	Thresholds     interface{}
 }
 
 type BlockDevice struct {
 	lsblk.BlockDevice
 	Children []BlockDevice `json:"children"`
-	Usage uint64 `json:"usage"`
-	SMART SMARTData `json:"smart"` // Add SMART data field
+	Usage    uint64        `json:"usage"`
+	SMART    SMARTData     `json:"smart"` // Add SMART data field
 }
 
 func ListDisks() ([]BlockDevice, error) {
@@ -38,7 +38,7 @@ func ListDisks() ([]BlockDevice, error) {
 
 	devices, err := lsblkExecutor.GetBlockDevices("")
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	return GetRecursiveDiskUsageAndSMARTInfo(devices)
@@ -49,62 +49,62 @@ func GetRecursiveDiskUsageAndSMARTInfo(devices []lsblk.BlockDevice) ([]BlockDevi
 	devicesF := make([]BlockDevice, len(devices))
 
 	for i, device := range devices {
-			used, err := GetDiskUsage(device.Name)
+		used, err := GetDiskUsage(device.Name)
+		if err != nil {
+			utils.Error("GetRecursiveDiskUsageAndSMARTInfo - Error fetching Disk usage for "+device.Name+" : ", err)
+			return nil, err
+		}
+
+		devicesF[i].BlockDevice = device
+		devicesF[i].Usage = used * uint64(devicesF[i].Size.Int64) / 100
+
+		// SMART information retrieval for NVMe and SATA
+		if device.Type == "disk" {
+			dev, err := smart.Open(device.Name)
 			if err != nil {
-					utils.Error("GetRecursiveDiskUsageAndSMARTInfo - Error fetching Disk usage for " + device.Name + " : ", err)
-					return nil, err
+				devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
+				continue
+			}
+			defer dev.Close()
+
+			GenericAttributes, err := dev.ReadGenericAttributes()
+			if err != nil {
+				utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
+				devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
+				continue
 			}
 
-			devicesF[i].BlockDevice = device
-			devicesF[i].Usage = used * uint64(devicesF[i].Size.Int64) / 100
-
-			// SMART information retrieval for NVMe and SATA
-			if device.Type == "disk" {
-        	dev, err := smart.Open(device.Name)
-					if err != nil {
-						devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
-						continue
-					}
-					defer dev.Close()
-
-					GenericAttributes, err := dev.ReadGenericAttributes()
-					if err != nil {
-						utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
-						devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
-						continue
-					}
-
-					smartData := SMARTData{
-						GenericAttributes: *GenericAttributes,
-						AdditionalData: map[string]string{},
-					}
-
-					switch sm := dev.(type) {
-						case *smart.SataDevice:
-							data, err := sm.ReadSMARTData()
-							t, err := sm.ReadSMARTThresholds()
-							if err != nil {
-								utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
-							} else {
-								smartData.AdditionalData = data
-								devicesF[i].SMART = smartData
-								devicesF[i].SMART.Thresholds = *t
-							}
-						case *smart.NVMeDevice:
-							data, err := sm.ReadSMART()
-							t, _, err := sm.Identify()
-							if err != nil {
-								utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
-							} else {
-								smartData.AdditionalData = data
-								smartData.Thresholds = *t
-								devicesF[i].SMART = smartData
-							}
-					}
+			smartData := SMARTData{
+				GenericAttributes: *GenericAttributes,
+				AdditionalData:    map[string]string{},
 			}
 
-			// Get usage and SMART info for children
-			devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
+			switch sm := dev.(type) {
+			case *smart.SataDevice:
+				data, err := sm.ReadSMARTData()
+				t, err := sm.ReadSMARTThresholds()
+				if err != nil {
+					utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
+				} else {
+					smartData.AdditionalData = data
+					devicesF[i].SMART = smartData
+					devicesF[i].SMART.Thresholds = *t
+				}
+			case *smart.NVMeDevice:
+				data, err := sm.ReadSMART()
+				t, _, err := sm.Identify()
+				if err != nil {
+					utils.Warn("GetRecursiveDiskUsageAndSMARTInfo - Error fetching SMART info for " + device.Name + " : " + err.Error())
+				} else {
+					smartData.AdditionalData = data
+					smartData.Thresholds = *t
+					devicesF[i].SMART = smartData
+				}
+			}
+		}
+
+		// Get usage and SMART info for children
+		devicesF[i].Children, _ = GetRecursiveDiskUsageAndSMARTInfo(device.Children)
 	}
 
 	return devicesF, nil
@@ -145,7 +145,7 @@ func GetDiskUsage(path string) (perc uint64, err error) {
 		return 0, err
 	}
 
-	return (used * 100) / (used+available), nil
+	return (used * 100) / (used + available), nil
 }
 
 func FormatDisk(diskPath string, filesystemType string) (io.Reader, error) {
@@ -156,8 +156,8 @@ func FormatDisk(diskPath string, filesystemType string) (io.Reader, error) {
 	isSupported := false
 	for _, fs := range supportedFilesystems {
 		if fs == filesystemType {
-		isSupported = true
-		break
+			isSupported = true
+			break
 		}
 	}
 	if !isSupported {
@@ -189,7 +189,7 @@ func FormatDisk(diskPath string, filesystemType string) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return out, nil
 }
 
@@ -205,7 +205,7 @@ func CreateSinglePartition(diskPath string) (io.Reader, error) {
 		return nil, errors.New("disk is mounted, please unmount it first")
 	}
 
-	cmd := exec.Command("sh", "-c", "echo 'type=83' | sudo sfdisk " + diskPath)
+	cmd := exec.Command("sh", "-c", "echo 'type=83' | sudo sfdisk "+diskPath)
 
 	// stream the output of the command
 	out, err := cmd.StdoutPipe()
@@ -219,6 +219,6 @@ func CreateSinglePartition(diskPath string) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return out, nil
 }

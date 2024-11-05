@@ -1,18 +1,18 @@
 package storage
 
 import (
-	"net/http"
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"bufio"
+	"net/http"
 	"os/exec"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 type FormatDiskJSON struct {
-	Disk string `json:"disk"`
-	Format string `json:"format"`
+	Disk     string `json:"disk"`
+	Format   string `json:"format"`
 	Password string `json:"password"`
 }
 
@@ -20,20 +20,20 @@ func isDiskOrPartition(path string) (string, error) {
 	cmd := exec.Command("lsblk", "-no", "TYPE", path)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-			return "", err
+		return "", err
 	}
 
 	if err := cmd.Start(); err != nil {
-			return "", err
+		return "", err
 	}
 
 	scanner := bufio.NewScanner(stdout)
 	if scanner.Scan() {
-			return scanner.Text(), nil
+		return scanner.Text(), nil
 	}
-	
+
 	if err := scanner.Err(); err != nil {
-			return "", err
+		return "", err
 	}
 
 	return "", fmt.Errorf("no output from lsblk")
@@ -44,7 +44,6 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-
 	if req.Method == "POST" {
 		// Enable streaming of response by setting appropriate headers
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -52,10 +51,10 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 
 		flusher, ok := w.(http.Flusher)
-    if !ok {
-        http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-        return
-    }
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
 
 		var request FormatDiskJSON
 		err := json.NewDecoder(req.Body).Decode(&request)
@@ -66,7 +65,7 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 
 			return
 		}
-			
+
 		nickname := req.Header.Get("x-cosmos-user")
 
 		errp := utils.CheckPassword(nickname, request.Password)
@@ -80,7 +79,7 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		out, err := FormatDisk(request.Disk, request.Format)
 		if err != nil {
 			utils.Error("FormatDiskRoute: Error formatting disk", err)
-			fmt.Fprintf(w, "[OPERATION FAILED] Error formatting disk: " + err.Error())
+			fmt.Fprintf(w, "[OPERATION FAILED] Error formatting disk: "+err.Error())
 			http.Error(w, "Error formatting disk", http.StatusInternalServerError)
 			return
 		}
@@ -88,7 +87,7 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		scanner := bufio.NewScanner(out)
 		for scanner.Scan() {
 			utils.Log(scanner.Text())
-			fmt.Fprintf(w, scanner.Text() + "\n")
+			fmt.Fprintf(w, scanner.Text()+"\n")
 			flusher.Flush()
 		}
 
@@ -96,34 +95,34 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		diskType, err := isDiskOrPartition(request.Disk)
 		utils.Debug("Checking if " + request.Disk + " is a partition: " + diskType)
 
-		if(diskType == "disk") {
+		if diskType == "disk" {
 			out, err = CreateSinglePartition(request.Disk)
 			if err != nil {
 				utils.Error("FormatDiskRoute: Error creating partition", err)
-				fmt.Fprintf(w, "[OPERATION FAILED] Error creating partition: " + err.Error())
+				fmt.Fprintf(w, "[OPERATION FAILED] Error creating partition: "+err.Error())
 				http.Error(w, "Error creating partition", http.StatusInternalServerError)
 				return
 			}
-	
+
 			scanner = bufio.NewScanner(out)
 			for scanner.Scan() {
 				utils.Log(scanner.Text())
-				fmt.Fprintf(w, scanner.Text() + "\n")
+				fmt.Fprintf(w, scanner.Text()+"\n")
 				flusher.Flush()
 			}
-	
-			out, err = FormatDisk(request.Disk + "1", request.Format)
+
+			out, err = FormatDisk(request.Disk+"1", request.Format)
 			if err != nil {
 				utils.Error("FormatDiskRoute: Error formatting partition", err)
-				fmt.Fprintf(w, "[OPERATION FAILED] Error formatting partition: " + err.Error())
+				fmt.Fprintf(w, "[OPERATION FAILED] Error formatting partition: "+err.Error())
 				http.Error(w, "Error formatting partition", http.StatusInternalServerError)
 				return
 			}
-	
+
 			scanner = bufio.NewScanner(out)
 			for scanner.Scan() {
 				utils.Log(scanner.Text())
-				fmt.Fprintf(w, scanner.Text() + "\n")
+				fmt.Fprintf(w, scanner.Text()+"\n")
 				flusher.Flush()
 			}
 		}
@@ -133,9 +132,8 @@ func FormatDiskRoute(w http.ResponseWriter, req *http.Request) {
 		flusher.Flush()
 		return
 	} else {
-		utils.Error("FormatDiskRoute: Method not allowed " + req.Method, nil)
+		utils.Error("FormatDiskRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
-

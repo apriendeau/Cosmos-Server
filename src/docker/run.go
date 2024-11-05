@@ -1,17 +1,17 @@
 package docker
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"net/http"
-	"fmt"
 	"errors"
+	"fmt"
+	"github.com/azukaar/cosmos-server/src/utils"
+	"net/http"
 
 	// "github.com/docker/docker/client"
 	// "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
-	
-	"runtime"
+
 	"golang.org/x/sys/cpu"
+	"runtime"
 )
 
 func CheckPuppetDB() {
@@ -28,7 +28,7 @@ func CheckPuppetDB() {
 			}
 
 			err = CreateService(service,
-				func (msg string) {
+				func(msg string) {
 					utils.Log(msg)
 				},
 			)
@@ -43,26 +43,26 @@ func CheckPuppetDB() {
 
 func RunDB(db utils.DatabaseConfig) (DockerServiceCreateRequest, error) {
 	imageName := "mongo:" + db.Version
-	
+
 	//if ARM use arm64v8/mongo
 	if runtime.GOARCH == "arm64" {
 		utils.Warn("ARM64 detected. Using ARM mongo 4.4.18")
 		imageName = "arm64v8/mongo:4.4.18"
-	// if CPU is missing AVX, use 4.4
+		// if CPU is missing AVX, use 4.4
 	} else if runtime.GOARCH == "amd64" && !cpu.X86.HasAVX {
 		utils.Warn("CPU does not support AVX. Using mongo 4.4")
 		imageName = "mongo:4.4"
 	}
 
 	service := DockerServiceCreateRequest{
-		Services: map[string]ContainerCreateRequestContainer {},
+		Services: map[string]ContainerCreateRequestContainer{},
 	}
-	
+
 	service.Services[db.Hostname] = ContainerCreateRequestContainer{
-		Name: db.Hostname,
-		Image: imageName,
+		Name:          db.Hostname,
+		Image:         imageName,
 		RestartPolicy: "always",
-		Command: "--wiredTigerCacheSizeGB 0.25",
+		Command:       "--wiredTigerCacheSizeGB 0.25",
 		Environment: []string{
 			"MONGO_INITDB_ROOT_USERNAME=" + db.Username,
 			"MONGO_INITDB_ROOT_PASSWORD=" + db.Password,
@@ -83,51 +83,51 @@ func RunDB(db utils.DatabaseConfig) (DockerServiceCreateRequest, error) {
 				Target: "/data/configdb",
 			},
 		},
-	};
+	}
 
 	if utils.IsInsideContainer && !utils.IsHostNetwork {
 		newNetwork, errNC := CreateCosmosNetwork(db.Hostname)
 		if errNC != nil {
 			return DockerServiceCreateRequest{}, errNC
 		}
-	
+
 		service.Services[db.Hostname].Labels["cosmos-network-name"] = newNetwork
 		service.Services[db.Hostname].Networks[newNetwork] = ContainerCreateRequestServiceNetwork{}
- 		
+
 		AttachNetworkToCosmos(newNetwork)
 	}
-	
+
 	return service, nil
 }
 
 func NewDB(w http.ResponseWriter, req *http.Request) (utils.DatabaseConfig, error) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Transfer-Encoding", "chunked")
-	
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-			return utils.DatabaseConfig{}, errors.New("Streaming unsupported!")
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return utils.DatabaseConfig{}, errors.New("Streaming unsupported!")
 	}
 
 	fmt.Fprintf(w, "NewInstall: Create DB\n")
 	flusher.Flush()
 
 	id := utils.GenerateRandomString(3)
-	mongoUser := "cosmos-" + utils.GenerateRandomString(5) 
+	mongoUser := "cosmos-" + utils.GenerateRandomString(5)
 	mongoPass := utils.GenerateRandomString(24)
 	monHost := "cosmos-mongo-" + id
-	
+
 	imageVersion := "6"
 
-	dbConf := utils.DatabaseConfig {
-		PuppetMode: true,
-		Hostname: monHost,
-		DbVolume: "cosmos-mongo-data-" + id,
+	dbConf := utils.DatabaseConfig{
+		PuppetMode:   true,
+		Hostname:     monHost,
+		DbVolume:     "cosmos-mongo-data-" + id,
 		ConfigVolume: "cosmos-mongo-config-" + id,
-		Version: imageVersion,
-		Username: mongoUser,
-		Password: mongoPass,
+		Version:      imageVersion,
+		Username:     mongoUser,
+		Password:     mongoPass,
 	}
 
 	service, err := RunDB(dbConf)
@@ -138,11 +138,11 @@ func NewDB(w http.ResponseWriter, req *http.Request) (utils.DatabaseConfig, erro
 		flusher.Flush()
 		return dbConf, err
 	}
-	
-	err = CreateService(service, 
-		func (msg string) {
+
+	err = CreateService(service,
+		func(msg string) {
 			utils.Log(msg)
-			fmt.Fprintf(w, msg + "\n")
+			fmt.Fprintf(w, msg+"\n")
 			flusher.Flush()
 		},
 	)

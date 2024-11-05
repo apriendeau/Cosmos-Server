@@ -1,12 +1,12 @@
 package user
 
 import (
-	"net/http"
 	"encoding/json"
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strconv"
 	"math"
+	"net/http"
+	"strconv"
 )
 
 var maxLimit = 1000
@@ -14,7 +14,7 @@ var maxLimit = 1000
 func UserList(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
 		return
-	} 
+	}
 
 	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
 	// from, _ := req.URL.Query().Get("from")
@@ -22,19 +22,19 @@ func UserList(w http.ResponseWriter, req *http.Request) {
 	if limit == 0 {
 		limit = maxLimit
 	}
-	
-	if(req.Method == "GET") {
+
+	if req.Method == "GET" {
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
+		defer closeDb()
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		utils.Debug("UserList: List user ")
 
-		userList := []utils.User{}	
+		userList := []utils.User{}
 
 		l := int64(math.Max((float64)(maxLimit), (float64)(limit)))
 
@@ -73,13 +73,12 @@ func UserList(w http.ResponseWriter, req *http.Request) {
 			userList = append(userList, user)
 		}
 
-		
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": userList,
+			"data":   userList,
 		})
 	} else {
-		utils.Error("UserList: Method not allowed" + req.Method, nil)
+		utils.Error("UserList: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

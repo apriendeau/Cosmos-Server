@@ -1,10 +1,10 @@
 package constellation
 
 import (
-	"net/http"
 	"encoding/json"
-		
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"net/http"
+
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func DeviceList(w http.ResponseWriter, req *http.Request) {
@@ -19,18 +19,18 @@ func DeviceList(w http.ResponseWriter, req *http.Request) {
 	}
 
 	isAdmin := utils.IsAdmin(req)
-	
+
 	// Connect to the collection
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
-  defer closeDb()
+	defer closeDb()
 	if errCo != nil {
 		utils.Error("Database Connect", errCo)
 		utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
 		return
 	}
-	
+
 	var devices []utils.ConstellationDevice
-	
+
 	// Check if user is an admin
 	if isAdmin {
 		// If admin, get all devices
@@ -41,7 +41,7 @@ func DeviceList(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error fetching devices", http.StatusInternalServerError, "DL001")
 			return
 		}
-		
+
 		if err = cursor.All(nil, &devices); err != nil {
 			utils.Error("DeviceList: Error decoding devices", err)
 			utils.HTTPError(w, "Error decoding devices", http.StatusInternalServerError, "DL002")
@@ -57,17 +57,17 @@ func DeviceList(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error fetching devices", http.StatusInternalServerError, "DL003")
 			return
 		}
-		
+
 		if err = cursor.All(nil, &devices); err != nil {
 			utils.Error("DeviceList: Error decoding devices", err)
 			utils.HTTPError(w, "Error decoding devices", http.StatusInternalServerError, "DL004")
 			return
 		}
 	}
-	
+
 	// Respond with the list of devices
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  "OK",
-		"data": devices,
+		"status": "OK",
+		"data":   devices,
 	})
 }

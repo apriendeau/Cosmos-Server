@@ -1,20 +1,20 @@
 package authorizationserver
 
 import (
-	"net/http"
 	"github.com/azukaar/cosmos-server/src/utils"
+	"net/http"
 )
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// This context will be passed to all methods.
 	ctx := req.Context()
-	
+
 	if utils.LoggedInOnly(rw, req) != nil {
 		return
 	}
 
 	nickname := req.Header.Get("x-cosmos-user")
-	
+
 	hostname := utils.GetMainConfig().HTTPConfig.Hostname
 	if utils.IsHTTPS {
 		hostname = "https://" + hostname

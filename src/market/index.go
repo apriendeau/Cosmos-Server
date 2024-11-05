@@ -1,15 +1,15 @@
-package market 
+package market
 
 import (
-	"net/http"
 	"encoding/json"
 	"fmt"
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
+	"net/http"
 )
 
 type marketGetResult struct {
-	Showcase []appDefinition `json:"showcase"`
-	All map[string]interface{} `json:"all"`
+	Showcase []appDefinition        `json:"showcase"`
+	All      map[string]interface{} `json:"all"`
 }
 
 func MarketGet(w http.ResponseWriter, req *http.Request) {
@@ -17,7 +17,7 @@ func MarketGet(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		config := utils.GetMainConfig()
 		configSourcesList := config.MarketConfig.Sources
 		configSources := map[string]bool{
@@ -37,9 +37,9 @@ func MarketGet(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error while updating cache", http.StatusInternalServerError, "MK002")
 			return
 		}
-		
+
 		marketGetResult := marketGetResult{
-			All: make(map[string]interface{}),
+			All:      make(map[string]interface{}),
 			Showcase: []appDefinition{},
 		}
 
@@ -54,7 +54,7 @@ func MarketGet(w http.ResponseWriter, req *http.Request) {
 			}
 			marketGetResult.All[market.Name] = results
 		}
-		
+
 		if len(currentMarketcache) > 0 {
 			for _, market := range currentMarketcache {
 				if market.Name == "cosmos-cloud" {
@@ -65,10 +65,10 @@ func MarketGet(w http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": marketGetResult,
+			"data":   marketGetResult,
 		})
 	} else {
-		utils.Error("MarketGet: Method not allowed" + req.Method, nil)
+		utils.Error("MarketGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

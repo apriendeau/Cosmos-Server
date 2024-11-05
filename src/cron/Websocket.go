@@ -1,10 +1,10 @@
 package cron
 
 import (
-	"net/http"
-	"github.com/gorilla/websocket"
 	"context"
+	"github.com/gorilla/websocket"
 	"log"
+	"net/http"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 )
@@ -25,8 +25,8 @@ func listenJobs(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-			log.Println("Error during connection upgrade:", err)
-			return
+		log.Println("Error during connection upgrade:", err)
+		return
 	}
 	defer conn.Close()
 
@@ -34,24 +34,24 @@ func listenJobs(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	go func() {
-			for {
-					select {
-					case <-ctx.Done():
-							// Context canceled, client disconnected
-							return
-					default:
-							// Your regular processing logic
-					}
-
-					// Example of reading from the connection
-					_, message, err := conn.ReadMessage()
-					if err != nil {
-							log.Println("Error during message reading:", err)
-							cancel() // Cancel the context on error
-							break
-					}
-					log.Printf("Received: %s", message)
+		for {
+			select {
+			case <-ctx.Done():
+				// Context canceled, client disconnected
+				return
+			default:
+				// Your regular processing logic
 			}
+
+			// Example of reading from the connection
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Error during message reading:", err)
+				cancel() // Cancel the context on error
+				break
+			}
+			log.Printf("Received: %s", message)
+		}
 	}()
 
 	// The rest of your handler, like sending messages to the client
@@ -63,9 +63,9 @@ func triggerJobUpdated(updateType string, jobName string, args ...string) {
 	for client := range clients {
 		err := client.WriteJSON(map[string]interface{}{
 			"channel": "jobUpdated",
-			"type": "updateType",
+			"type":    "updateType",
 			"jobName": jobName,
-			"args": args,
+			"args":    args,
 		})
 		if err != nil {
 			log.Printf("error: %v", err)

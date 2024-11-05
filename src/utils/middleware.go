@@ -2,14 +2,14 @@ package utils
 
 import (
 	"context"
-	"net/http"
-	"time"
-	"net"
-	"strings"
 	"fmt"
-	"sync"
+	"net"
+	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/mxk/go-flowrate/flowrate"
 	"github.com/oschwald/geoip2-golang"
@@ -40,7 +40,7 @@ func getIPAbuseCounter(ip string) int64 {
 	// Load the *safeInt
 	actual, ok := BannedIPs.Load(ip)
 	if !ok {
-			return 0
+		return 0
 	}
 	counter := actual.(*safeInt)
 
@@ -49,36 +49,36 @@ func getIPAbuseCounter(ip string) int64 {
 }
 
 func BlockBannedIPs(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        ip, _, err := net.SplitHostPort(r.RemoteAddr)
-        if err != nil {
-					if hj, ok := w.(http.Hijacker); ok {
-							conn, _, err := hj.Hijack()
-							if err == nil {
-									conn.Close()
-							}
-					}
-					return
-        }
-
-				nbAbuse := getIPAbuseCounter(ip)
-
-        if nbAbuse > 275 {
-					Warn("IP " + ip + " has " + fmt.Sprintf("%d", nbAbuse) + " abuse(s) and will soon be banned.")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			if hj, ok := w.(http.Hijacker); ok {
+				conn, _, err := hj.Hijack()
+				if err == nil {
+					conn.Close()
 				}
+			}
+			return
+		}
 
-        if nbAbuse > 300 {
-					if hj, ok := w.(http.Hijacker); ok {
-							conn, _, err := hj.Hijack()
-							if err == nil {
-									conn.Close()
-							}
-					}
-					return
+		nbAbuse := getIPAbuseCounter(ip)
+
+		if nbAbuse > 275 {
+			Warn("IP " + ip + " has " + fmt.Sprintf("%d", nbAbuse) + " abuse(s) and will soon be banned.")
+		}
+
+		if nbAbuse > 300 {
+			if hj, ok := w.(http.Hijacker); ok {
+				conn, _, err := hj.Hijack()
+				if err == nil {
+					conn.Close()
 				}
+			}
+			return
+		}
 
-        next.ServeHTTP(w, r)
-    })
+		next.ServeHTTP(w, r)
+	})
 }
 
 func CleanBannedIPs() {
@@ -96,9 +96,9 @@ func MiddlewareTimeout(timeout time.Duration) func(next http.Handler) http.Handl
 				cancel()
 				if ctx.Err() == context.DeadlineExceeded {
 					Error("Request Timeout. Cancelling.", ctx.Err())
-					HTTPError(w, "Gateway Timeout", 
+					HTTPError(w, "Gateway Timeout",
 						http.StatusGatewayTimeout, "HTTP002")
-					return 
+					return
 				}
 			}()
 
@@ -123,11 +123,11 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 func BandwithLimiterMiddleware(max int64) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if(max > 0) {
+			if max > 0 {
 				fw := flowrate.NewWriter(w, max)
 				w = &responseWriter{w, fw}
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -135,24 +135,24 @@ func BandwithLimiterMiddleware(max int64) func(next http.Handler) http.Handler {
 
 func SetSecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if(IsHTTPS) {
+		if IsHTTPS {
 			// TODO: Add preload if we have a valid certificate
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		
+
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Content-Security-Policy", "frame-ancestors 'self'")
-		
+
 		w.Header().Set("X-Served-By-Cosmos", "1")
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
 
 func CORSHeader(origin string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if origin != "" {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -235,10 +235,10 @@ func BlockByCountryMiddleware(blockedCountries []string, CountryBlacklistIsWhite
 								"warning",
 								"",
 								map[string]interface{}{
-								"clientID": ip,
-								"country": countryCode,
-								"url": r.URL.String(),
-							})
+									"clientID": ip,
+									"country":  countryCode,
+									"url":      r.URL.String(),
+								})
 
 							http.Error(w, "Access denied", http.StatusForbidden)
 							return
@@ -281,9 +281,9 @@ func BlockPostWithoutReferer(next http.Handler) http.Handler {
 						"warning",
 						"",
 						map[string]interface{}{
-						"clientID": ip,
-						"url": r.URL.String(),
-					})
+							"clientID": ip,
+							"url":      r.URL.String(),
+						})
 
 					IncrementIPAbuseCounter(ip)
 				}
@@ -310,7 +310,7 @@ func EnsureHostname(next http.Handler) http.Handler {
 		hostnames := GetAllHostnames(false, false)
 
 		reqHostNoPort := strings.Split(r.Host, ":")[0]
-		
+
 		isOk := false
 
 		for _, hostname := range hostnames {
@@ -319,19 +319,19 @@ func EnsureHostname(next http.Handler) http.Handler {
 				isOk = true
 			}
 		}
-		
-		if(GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess) {
-			if(IsLocalIP(reqHostNoPort)) {
+
+		if GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess {
+			if IsLocalIP(reqHostNoPort) {
 				isOk = true
 			}
 		}
-		
+
 		if !isOk {
 			PushShieldMetrics("hostname")
-			Error("Invalid Hostname " + r.Host + " for request. Expecting one of " + fmt.Sprintf("%v", hostnames), nil)
+			Error("Invalid Hostname "+r.Host+" for request. Expecting one of "+fmt.Sprintf("%v", hostnames), nil)
 			w.WriteHeader(http.StatusBadRequest)
 			http.Error(w, "Bad Request: Invalid hostname. Use your domain instead of your IP to access your server. Check logs if more details are needed.", http.StatusBadRequest)
-			
+
 			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 			if ip != "" {
 				TriggerEvent(
@@ -340,10 +340,10 @@ func EnsureHostname(next http.Handler) http.Handler {
 					"warning",
 					"",
 					map[string]interface{}{
-					"clientID": ip,
-					"hostname": r.Host,
-					"url": r.URL.String(),
-				})
+						"clientID": ip,
+						"hostname": r.Host,
+						"url":      r.URL.String(),
+					})
 				IncrementIPAbuseCounter(ip)
 			}
 
@@ -371,22 +371,22 @@ func EnsureHostnameCosmosAPI(next http.Handler) http.Handler {
 		ni := GetMainConfig().NewInstall
 
 		isLogin := !strings.HasPrefix(r.URL.Path, "/cosmos/api") ||
-						   strings.HasPrefix(r.URL.Path, "/cosmos/api/login") ||
-						   strings.HasPrefix(r.URL.Path, "/cosmos/api/status") ||
-							 strings.HasPrefix(r.URL.Path, "/cosmos/api/password-reset") ||
-							 strings.HasPrefix(r.URL.Path, "/cosmos/api/mfa") ||
-							 strings.HasPrefix(r.URL.Path, "/cosmos/api/can-send-email") ||
-							 strings.HasPrefix(r.URL.Path, "/cosmos/api/me")
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/login") ||
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/status") ||
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/password-reset") ||
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/mfa") ||
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/can-send-email") ||
+			strings.HasPrefix(r.URL.Path, "/cosmos/api/me")
 
 		if ni || og == "0.0.0.0" || isLogin {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		reqHostNoPort := strings.Split(r.Host, ":")[0]
-		
-		if(GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess) {
-			if(IsLocalIP(reqHostNoPort)) {
+
+		if GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess {
+			if IsLocalIP(reqHostNoPort) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -394,10 +394,10 @@ func EnsureHostnameCosmosAPI(next http.Handler) http.Handler {
 
 		if og != reqHostNoPort {
 			PushShieldMetrics("hostname")
-			Error("Invalid Hostname " + r.Host + " for API request to " + r.URL.Path, nil)
+			Error("Invalid Hostname "+r.Host+" for API request to "+r.URL.Path, nil)
 			w.WriteHeader(http.StatusBadRequest)
 			http.Error(w, "Bad Request: Invalid hostname. Use your domain instead of your IP to access your server. Check logs if more details are needed.", http.StatusBadRequest)
-			
+
 			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 			if ip != "" {
 				TriggerEvent(
@@ -406,10 +406,10 @@ func EnsureHostnameCosmosAPI(next http.Handler) http.Handler {
 					"warning",
 					"",
 					map[string]interface{}{
-					"clientID": ip,
-					"hostname": r.Host,
-					"url": r.URL.String(),
-				})
+						"clientID": ip,
+						"hostname": r.Host,
+						"url":      r.URL.String(),
+					})
 				IncrementIPAbuseCounter(ip)
 			}
 
@@ -428,11 +428,10 @@ func IsValidHostname(hostname string) bool {
 		return true
 	}
 
-
 	hostnames := GetAllHostnames(false, false)
 
 	reqHostNoPort := strings.Split(hostname, ":")[0]
-	
+
 	isOk := false
 
 	for _, hostname := range hostnames {
@@ -441,13 +440,13 @@ func IsValidHostname(hostname string) bool {
 			isOk = true
 		}
 	}
-	
-	if(GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess) {
-		if(IsLocalIP(reqHostNoPort)) {
+
+	if GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess {
+		if IsLocalIP(reqHostNoPort) {
 			isOk = true
 		}
 	}
-		
+
 	return isOk
 }
 
@@ -469,91 +468,91 @@ func Restrictions(RestrictToConstellation bool, WhitelistInboundIPs []string) fu
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				http.Error(w, "Invalid request", http.StatusBadRequest)
+				return
+			}
 
-		isUsingWhiteList := len(WhitelistInboundIPs) > 0
+			isUsingWhiteList := len(WhitelistInboundIPs) > 0
 
-		isInWhitelist := false
-		isInConstellation := strings.HasPrefix(ip, "192.168.201.") || strings.HasPrefix(ip, "192.168.202.")
+			isInWhitelist := false
+			isInConstellation := strings.HasPrefix(ip, "192.168.201.") || strings.HasPrefix(ip, "192.168.202.")
 
-		for _, ipRange := range WhitelistInboundIPs {
-			Debug("Checking if " + ip + " is in " + ipRange)
-			if strings.Contains(ipRange, "/") {
-				if ok, _ := IPInRange(ip, ipRange); ok {
-					isInWhitelist = true
-				}
-			} else {
-				if ip == ipRange {
-					isInWhitelist = true
+			for _, ipRange := range WhitelistInboundIPs {
+				Debug("Checking if " + ip + " is in " + ipRange)
+				if strings.Contains(ipRange, "/") {
+					if ok, _ := IPInRange(ip, ipRange); ok {
+						isInWhitelist = true
+					}
+				} else {
+					if ip == ipRange {
+						isInWhitelist = true
+					}
 				}
 			}
-		}
 
-		if(RestrictToConstellation) {
-			if(!isInConstellation) {
-				if(!isUsingWhiteList) {
-					PushShieldMetrics("ip-whitelists")
+			if RestrictToConstellation {
+				if !isInConstellation {
+					if !isUsingWhiteList {
+						PushShieldMetrics("ip-whitelists")
 
-					TriggerEvent(
-						"cosmos.proxy.shield.whitelist",
-						"Proxy Shield IP blocked by whitelist",
-						"warning",
-						"",
-						map[string]interface{}{
-						"clientID": ip,
-						"url": r.URL.String(),
-					})
+						TriggerEvent(
+							"cosmos.proxy.shield.whitelist",
+							"Proxy Shield IP blocked by whitelist",
+							"warning",
+							"",
+							map[string]interface{}{
+								"clientID": ip,
+								"url":      r.URL.String(),
+							})
 
-					IncrementIPAbuseCounter(ip)
-					Error("Request from " + ip + " is blocked because of restrictions", nil)
-					Debug("Blocked by RestrictToConstellation isInConstellation isUsingWhiteList")
-					http.Error(w, "Access denied", http.StatusForbidden)
-					return
-				} else if (!isInWhitelist) {
-					PushShieldMetrics("ip-whitelists")
-					
-					TriggerEvent(
-						"cosmos.proxy.shield.whitelist",
-						"Proxy Shield IP blocked by whitelist",
-						"warning",
-						"",
-						map[string]interface{}{
-						"clientID": ip,
-						"url": r.URL.String(),
-					})
+						IncrementIPAbuseCounter(ip)
+						Error("Request from "+ip+" is blocked because of restrictions", nil)
+						Debug("Blocked by RestrictToConstellation isInConstellation isUsingWhiteList")
+						http.Error(w, "Access denied", http.StatusForbidden)
+						return
+					} else if !isInWhitelist {
+						PushShieldMetrics("ip-whitelists")
 
-					IncrementIPAbuseCounter(ip)
-					Error("Request from " + ip + " is blocked because of restrictions", nil)
-					Debug("Blocked by RestrictToConstellation isInConstellation isInWhitelist")
-					http.Error(w, "Access denied", http.StatusForbidden)
-					return
+						TriggerEvent(
+							"cosmos.proxy.shield.whitelist",
+							"Proxy Shield IP blocked by whitelist",
+							"warning",
+							"",
+							map[string]interface{}{
+								"clientID": ip,
+								"url":      r.URL.String(),
+							})
+
+						IncrementIPAbuseCounter(ip)
+						Error("Request from "+ip+" is blocked because of restrictions", nil)
+						Debug("Blocked by RestrictToConstellation isInConstellation isInWhitelist")
+						http.Error(w, "Access denied", http.StatusForbidden)
+						return
+					}
 				}
+			} else if isUsingWhiteList && !isInWhitelist {
+				PushShieldMetrics("ip-whitelists")
+
+				TriggerEvent(
+					"cosmos.proxy.shield.whitelist",
+					"Proxy Shield IP blocked by whitelist",
+					"warning",
+					"",
+					map[string]interface{}{
+						"clientID": ip,
+						"url":      r.URL.String(),
+					})
+
+				IncrementIPAbuseCounter(ip)
+				Error("Request from "+ip+" is blocked because of restrictions", nil)
+				Debug("Blocked by RestrictToConstellation isInConstellation isUsingWhiteList isInWhitelist")
+				http.Error(w, "Access denied", http.StatusForbidden)
+				return
 			}
-		} else if(isUsingWhiteList && !isInWhitelist) {
-			PushShieldMetrics("ip-whitelists")
 
-			TriggerEvent(
-				"cosmos.proxy.shield.whitelist",
-				"Proxy Shield IP blocked by whitelist",
-				"warning",
-				"",
-				map[string]interface{}{
-				"clientID": ip,
-				"url": r.URL.String(),
-			})
-
-			IncrementIPAbuseCounter(ip)
-			Error("Request from " + ip + " is blocked because of restrictions", nil)
-			Debug("Blocked by RestrictToConstellation isInConstellation isUsingWhiteList isInWhitelist")
-			http.Error(w, "Access denied", http.StatusForbidden)
-			return
-		}
-
-		next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r)
 		})
 	}
 }
@@ -576,7 +575,7 @@ func SPAHandler(targetFolder string) http.Handler {
 		// if file does not exist or is a directory, serve index.html
 		if stat, err := os.Stat(targetFolder + r.URL.Path); os.IsNotExist(err) || stat.IsDir() {
 			Debug("Serving SPA index.html")
-			http.ServeFile(w, r, targetFolder + "/index.html")
+			http.ServeFile(w, r, targetFolder+"/index.html")
 		} else {
 			Debug("Serving SPA from " + targetFolder + r.URL.Path)
 			fs.ServeHTTP(w, r)

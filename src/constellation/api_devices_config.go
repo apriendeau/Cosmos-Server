@@ -2,15 +2,15 @@ package constellation
 
 import (
 	"encoding/json"
-	"math/rand"
-	"net"
-	"strings"
-	"sync"
-	"io/ioutil"
-	"gopkg.in/yaml.v2"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"math/rand"
+	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/azukaar/cosmos-server/src/utils"
@@ -27,78 +27,76 @@ func compareConfigs(configMap, configMapNew map[string]interface{}) bool {
 	}
 }
 
-
 func setDefaultConstConfig(configMap map[string]interface{}) map[string]interface{} {
 	utils.Debug("setDefaultConstConfig: Setting default values for client nebula.yml")
 
 	if _, exists := configMap["logging"]; !exists {
-			configMap["logging"] = map[string]interface{}{
-					"format": "text",
-					"level":  "info",
-			}
+		configMap["logging"] = map[string]interface{}{
+			"format": "text",
+			"level":  "info",
+		}
 	}
 
 	if _, exists := configMap["listen"]; !exists {
-			configMap["listen"] = map[string]interface{}{
-					"host": "0.0.0.0",
-					"port": 4242,
-			}
+		configMap["listen"] = map[string]interface{}{
+			"host": "0.0.0.0",
+			"port": 4242,
+		}
 	}
 
 	if _, exists := configMap["punchy"]; !exists {
-			configMap["punchy"] = map[string]interface{}{
-					"punch":    true,
-					"respond":  true,
-			}
+		configMap["punchy"] = map[string]interface{}{
+			"punch":   true,
+			"respond": true,
+		}
 	}
 
 	if _, exists := configMap["tun"]; !exists {
-			configMap["tun"] = map[string]interface{}{
-					"dev":                  "nebula1",
-					"disabled":             false,
-					"drop_local_broadcast": false,
-					"drop_multicast":       false,
-					"mtu":                  1300,
-					"routes":               []interface{}{},
-					"tx_queue":             500,
-					"unsafe_routes":        []interface{}{},
-			}
+		configMap["tun"] = map[string]interface{}{
+			"dev":                  "nebula1",
+			"disabled":             false,
+			"drop_local_broadcast": false,
+			"drop_multicast":       false,
+			"mtu":                  1300,
+			"routes":               []interface{}{},
+			"tx_queue":             500,
+			"unsafe_routes":        []interface{}{},
+		}
 	}
 
 	if _, exists := configMap["firewall"]; !exists {
-			configMap["firewall"] = map[string]interface{}{
-					"conntrack": map[string]interface{}{
-							"default_timeout": "10m",
-							"tcp_timeout":     "12m",
-							"udp_timeout":     "3m",
-					},
-					"inbound": []interface{}{
-							map[string]interface{}{
-									"host":  "any",
-									"port":  "any",
-									"proto": "any",
-							},
-					},
-					"inbound_action": "drop",
-					"outbound": []interface{}{
-							map[string]interface{}{
-									"host":  "any",
-									"port":  "any",
-									"proto": "any",
-							},
-					},
-					"outbound_action": "drop",
-			}
+		configMap["firewall"] = map[string]interface{}{
+			"conntrack": map[string]interface{}{
+				"default_timeout": "10m",
+				"tcp_timeout":     "12m",
+				"udp_timeout":     "3m",
+			},
+			"inbound": []interface{}{
+				map[string]interface{}{
+					"host":  "any",
+					"port":  "any",
+					"proto": "any",
+				},
+			},
+			"inbound_action": "drop",
+			"outbound": []interface{}{
+				map[string]interface{}{
+					"host":  "any",
+					"port":  "any",
+					"proto": "any",
+				},
+			},
+			"outbound_action": "drop",
+		}
 	}
 
 	return configMap
 }
 
-
 func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
-	time.Sleep(time.Duration(rand.Float64()*2)*time.Second)
+	time.Sleep(time.Duration(rand.Float64()*2) * time.Second)
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		ip, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
 			http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -114,7 +112,7 @@ func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
 
 		// remove "Bearer " from auth header
 		auth = strings.Replace(auth, "Bearer ", "", 1)
-		
+
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
 		defer closeDb()
 		if errCo != nil {
@@ -126,8 +124,8 @@ func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
 		utils.Log("DeviceConfigSync: Fetching devices for IP " + ip)
 
 		cursor, err := c.Find(nil, map[string]interface{}{
-			"IP": ip + "/24",
-			"APIKey": auth,
+			"IP":      ip + "/24",
+			"APIKey":  auth,
 			"Blocked": false,
 		})
 		defer cursor.Close(nil)
@@ -136,7 +134,7 @@ func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error fetching devices", http.StatusInternalServerError, "DL003")
 			return
 		}
-		
+
 		// if any device is found, return config without keys
 		if cursor.Next(nil) {
 			d := utils.ConstellationDevice{}
@@ -147,16 +145,16 @@ func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER + "nebula.yml", "", "", "", "", utils.ConstellationDevice{
-				Nickname: d.Nickname,
-				DeviceName: d.DeviceName,
-				PublicKey: "",
-				IP: d.IP,
-				IsLighthouse: d.IsLighthouse,
-				IsRelay: d.IsRelay,
+			configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER+"nebula.yml", "", "", "", "", utils.ConstellationDevice{
+				Nickname:       d.Nickname,
+				DeviceName:     d.DeviceName,
+				PublicKey:      "",
+				IP:             d.IP,
+				IsLighthouse:   d.IsLighthouse,
+				IsRelay:        d.IsRelay,
 				PublicHostname: d.PublicHostname,
-				Port: d.Port,
-				APIKey: "",
+				Port:           d.Port,
+				APIKey:         "",
 			}, false, false)
 
 			if err != nil {
@@ -167,24 +165,24 @@ func GetDeviceConfigSync(w http.ResponseWriter, req *http.Request) {
 
 			// Respond with the list of devices
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"status":  "OK",
-				"data": string(configYml),
+				"status": "OK",
+				"data":   string(configYml),
 			})
 		} else {
 			utils.Error("DeviceConfigSync: Unauthorized [2]", nil)
 			utils.HTTPError(w, "Unauthorized [2]", http.StatusUnauthorized, "DCS001")
 			return
 		}
-		
+
 	} else {
-		utils.Error("DeviceConfigSync: Method not allowed" + req.Method, nil)
+		utils.Error("DeviceConfigSync: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
 
 type DeviceResyncRequest struct {
-	Nickname string `json:"nickname",validate:"required,min=3,max=32,alphanum"`
+	Nickname   string `json:"nickname",validate:"required,min=3,max=32,alphanum"`
 	DeviceName string `json:"deviceName",validate:"required,min=3,max=32,alphanum"`
 }
 
@@ -200,14 +198,14 @@ func GetDeviceConfigForSync(nickname, deviceName string) ([]byte, error) {
 
 	cursor, err := c.Find(nil, map[string]interface{}{
 		"DeviceName": deviceName,
-		"Nickname": nickname,
+		"Nickname":   nickname,
 	})
 	defer cursor.Close(nil)
 	if err != nil {
 		utils.Error("DeviceList: Error fetching devices", err)
 		return nil, err
 	}
-	
+
 	// if any device is found, return config without keys
 	if cursor.Next(nil) {
 		utils.Log("DeviceConfigSync: Device found " + deviceName)
@@ -219,16 +217,16 @@ func GetDeviceConfigForSync(nickname, deviceName string) ([]byte, error) {
 			return nil, err
 		}
 
-		configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER + "nebula.yml", "", "", "", "", utils.ConstellationDevice{
-			Nickname: d.Nickname,
-			DeviceName: d.DeviceName,
-			PublicKey: "",
-			IP: d.IP,
-			IsLighthouse: d.IsLighthouse,
-			IsRelay: d.IsRelay,
+		configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER+"nebula.yml", "", "", "", "", utils.ConstellationDevice{
+			Nickname:       d.Nickname,
+			DeviceName:     d.DeviceName,
+			PublicKey:      "",
+			IP:             d.IP,
+			IsLighthouse:   d.IsLighthouse,
+			IsRelay:        d.IsRelay,
 			PublicHostname: d.PublicHostname,
-			Port: d.Port,
-			APIKey: "",
+			Port:           d.Port,
+			APIKey:         "",
 		}, false, false)
 
 		if err != nil {
@@ -238,8 +236,8 @@ func GetDeviceConfigForSync(nickname, deviceName string) ([]byte, error) {
 
 		// respond in JSON (from yaml)
 		configJSON, err := json.Marshal(map[string]interface{}{
-			"status":  "OK",
-			"data": string(configYml),
+			"status": "OK",
+			"data":   string(configYml),
 		})
 
 		if err != nil {
@@ -247,7 +245,7 @@ func GetDeviceConfigForSync(nickname, deviceName string) ([]byte, error) {
 			return nil, err
 		}
 
-		return configJSON, nil		
+		return configJSON, nil
 	} else {
 		utils.Error("DeviceConfigSync: Unauthorized [2]", nil)
 		return nil, errors.New("Unauthorized")
@@ -255,7 +253,7 @@ func GetDeviceConfigForSync(nickname, deviceName string) ([]byte, error) {
 }
 
 func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
-	if(req.Method == "POST") {
+	if req.Method == "POST" {
 		var request DeviceResyncRequest
 		err1 := json.NewDecoder(req.Body).Decode(&request)
 		if err1 != nil {
@@ -268,14 +266,14 @@ func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
 		errV := utils.Validate.Struct(request)
 		if errV != nil {
 			utils.Error("DeviceConfigManualSync: Invalid User Request", errV)
-			utils.HTTPError(w, "Device Creation Error: " + errV.Error(),
+			utils.HTTPError(w, "Device Creation Error: "+errV.Error(),
 				http.StatusInternalServerError, "DB002")
-			return 
+			return
 		}
-		
+
 		nickname := utils.Sanitize(request.Nickname)
 		deviceName := utils.Sanitize(request.DeviceName)
-		
+
 		if utils.AdminOrItselfOnly(w, req, nickname) != nil {
 			return
 		}
@@ -283,15 +281,15 @@ func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
 		utils.Log("DeviceConfigManualSync: Resync Device " + deviceName)
 
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
-  	defer closeDb()
+		defer closeDb()
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		cursor, err := c.Find(nil, map[string]interface{}{
-			"Nickname": nickname,
+			"Nickname":   nickname,
 			"DeviceName": deviceName,
 		})
 		defer cursor.Close(nil)
@@ -300,7 +298,7 @@ func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error fetching devices", http.StatusInternalServerError, "DL003")
 			return
 		}
-		
+
 		// if any device is found, return config without keys
 		if cursor.Next(nil) {
 			d := utils.ConstellationDevice{}
@@ -311,16 +309,16 @@ func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER + "nebula.yml", "", "", "", "", utils.ConstellationDevice{
-				Nickname: d.Nickname,
-				DeviceName: d.DeviceName,
-				PublicKey: "",
-				IP: d.IP,
-				IsLighthouse: d.IsLighthouse,
-				IsRelay: d.IsRelay,
+			configYml, err := getYAMLClientConfig(d.DeviceName, utils.CONFIGFOLDER+"nebula.yml", "", "", "", "", utils.ConstellationDevice{
+				Nickname:       d.Nickname,
+				DeviceName:     d.DeviceName,
+				PublicKey:      "",
+				IP:             d.IP,
+				IsLighthouse:   d.IsLighthouse,
+				IsRelay:        d.IsRelay,
 				PublicHostname: d.PublicHostname,
-				Port: d.Port,
-				APIKey: "",
+				Port:           d.Port,
+				APIKey:         "",
 			}, true, true)
 
 			if err != nil {
@@ -331,17 +329,17 @@ func GetDeviceConfigManualSync(w http.ResponseWriter, req *http.Request) {
 
 			// Respond with the list of devices
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"status":  "OK",
-				"data": string(configYml),
+				"status": "OK",
+				"data":   string(configYml),
 			})
 		} else {
 			utils.Error("DeviceConfigSync: Unauthorized [2]", nil)
 			utils.HTTPError(w, "Unauthorized [2]", http.StatusUnauthorized, "DCS001")
 			return
 		}
-		
+
 	} else {
-		utils.Error("DeviceConfigManualSync: Method not allowed" + req.Method, nil)
+		utils.Error("DeviceConfigManualSync: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -351,7 +349,7 @@ func GetNATSCredentials(isMaster bool) (string, string, error) {
 	if isMaster {
 		return MASTERUSER, MASTERPWD, nil
 	}
-	
+
 	nebulaFile, err := ioutil.ReadFile(utils.CONFIGFOLDER + "nebula.yml")
 	if err != nil {
 		utils.Error("GetNATSCredentials: error while reading nebula.yml", err)
@@ -380,9 +378,9 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	if !utils.GetMainConfig().ConstellationConfig.Enabled || !utils.GetMainConfig().ConstellationConfig.SlaveMode {
 		return false, nil
 	}
-	
+
 	utils.Log("SlaveConfigSync: Resyncing config")
-	
+
 	nebulaFile, err := ioutil.ReadFile(utils.CONFIGFOLDER + "nebula.yml")
 	if err != nil {
 		utils.Error("SlaveConfigSync: error while reading nebula.yml", err)
@@ -399,7 +397,7 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	endpoint := configMap["cstln_config_endpoint"]
 	apiKey := configMap["cstln_api_key"]
 
-	if endpoint == nil  || apiKey == nil {
+	if endpoint == nil || apiKey == nil {
 		utils.Error("SlaveConfigSync: Invalid slave config file for resync", nil)
 		return false, errors.New("Invalid slave config file for resync")
 	}
@@ -418,7 +416,7 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	if body == "" {
 		utils.Log("SlaveConfigSync: Fetching config from NATS")
 
-		body, err = SendNATSMessage(NATSClientTopic + ".constellation.config", "SYNC")
+		body, err = SendNATSMessage(NATSClientTopic+".constellation.config", "SYNC")
 		if err != nil {
 			utils.Error("SlaveConfigSync: Error fetching config", err)
 			return false, err
@@ -428,14 +426,14 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	}
 
 	type Response struct {
-    Status string      `json:"status"`
-    Data   interface{} `json:"data"` // Use interface{} if the data type can vary
+		Status string      `json:"status"`
+		Data   interface{} `json:"data"` // Use interface{} if the data type can vary
 	}
 	var jsonresp Response
 	err = json.Unmarshal([]byte(body), &jsonresp)
 	if err != nil {
-			utils.Error("SlaveConfigSync: Error unmarshalling JSON", err)
-			return false, err
+		utils.Error("SlaveConfigSync: Error unmarshalling JSON", err)
+		return false, err
 	}
 
 	if jsonresp.Status != "OK" {
@@ -458,7 +456,6 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 
 	configMapNew["cstln_api_key"] = apiKey
 
-	
 	pkiMap, ok := configMapNew["pki"].(map[string]interface{})
 	if !ok {
 		pkiMap = make(map[string]interface{})
@@ -469,8 +466,8 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	pkiMap["ca"] = configMap["pki"].(map[interface{}]interface{})["ca"]
 
 	configMapNew["pki"] = pkiMap
-	
-	// apply tunnels 
+
+	// apply tunnels
 
 	// Define the slice to hold the unmarshalled tunnels.
 	var tunnels []utils.ProxyRouteConfig
@@ -479,14 +476,14 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 	// Convert the `cstln_tunnels` part back to YAML string.
 	tunnelsData, err := yaml.Marshal(configMapNew["cstln_tunnels"])
 	if err != nil {
-			utils.Error("Error marshalling tunnels data back to YAML", err)
+		utils.Error("Error marshalling tunnels data back to YAML", err)
 	} else {
 		// Unmarshal the YAML string into the specific struct.
 		err = yaml.Unmarshal(tunnelsData, &tunnels)
 
 		if err != nil {
-				utils.Error("Error unmarshalling tunnels YAML", err)
-		}	
+			utils.Error("Error unmarshalling tunnels YAML", err)
+		}
 	}
 
 	config.ConstellationConfig.Tunnels = tunnels
@@ -499,16 +496,16 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 		return false, err
 	}
 
-	err = ioutil.WriteFile(utils.CONFIGFOLDER + "nebula.yml", configYml, 0644)
+	err = ioutil.WriteFile(utils.CONFIGFOLDER+"nebula.yml", configYml, 0644)
 	if err != nil {
 		utils.Error("SlaveConfigSync: Error writing new config", err)
 		return false, err
 	}
 
 	utils.Log("SlaveConfigSync: Config resynced")
-	
+
 	utils.SetBaseMainConfig(config)
-	
+
 	utils.TriggerEvent(
 		"cosmos.settings",
 		"Settings updated",
@@ -516,7 +513,7 @@ func SlaveConfigSync(newConfig string) (bool, error) {
 		"",
 		map[string]interface{}{
 			"from": "Constellation",
-	})
+		})
 
 	// if the config change, restart
 	if !compareConfigs(configMap, configMapNew) {
@@ -572,7 +569,6 @@ func TriggerClientResync() error {
 			}
 
 			err = PublishNATSMessage("cosmos."+username+".constellation.config.resync", (string)(body))
-			
 
 			if err != nil {
 				utils.Error("TriggerClientResync: Error sending resync message to client", err)
@@ -581,7 +577,7 @@ func TriggerClientResync() error {
 			if !utils.GetMainConfig().ConstellationConfig.DoNotSyncNodes {
 				SendSyncPayload(username)
 			}
-			
+
 			utils.Log("TriggerClientResync: Resync message sent to " + username)
 		}
 	}

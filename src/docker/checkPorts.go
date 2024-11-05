@@ -3,12 +3,12 @@ package docker
 import (
 	"github.com/azukaar/cosmos-server/src/utils"
 
-	"os"
-	"net"
-	"strings"
 	"errors"
-	"runtime"
 	mountType "github.com/docker/docker/api/types/mount"
+	"net"
+	"os"
+	"runtime"
+	"strings"
 )
 
 func isPortAvailable(port string) bool {
@@ -42,7 +42,7 @@ func CheckPorts() error {
 		}
 	}
 
-	// append hostname port 
+	// append hostname port
 	hostname := config.HTTPConfig.Hostname
 	if strings.Contains(hostname, ":") {
 		hostnameport := strings.Split(hostname, ":")[1]
@@ -73,11 +73,11 @@ func CheckPorts() error {
 
 	for containerPort, hostConfig := range inspect.NetworkSettings.Ports {
 		utils.Debug("Container port: " + containerPort.Port() + "/" + containerPort.Proto())
-		
+
 		for _, hostPort := range hostConfig {
 			utils.Debug("Host port: " + hostPort.HostPort)
 			ports[hostPort.HostPort] = struct{}{}
-			finalPorts = append(finalPorts, hostPort.HostPort + ":" + containerPort.Port() + "/" + containerPort.Proto())
+			finalPorts = append(finalPorts, hostPort.HostPort+":"+containerPort.Port()+"/"+containerPort.Proto())
 		}
 	}
 
@@ -91,8 +91,8 @@ func CheckPorts() error {
 			if !isPortAvailable(port) {
 				utils.Error("Port "+port+" is added to a URL but it is not available. Skipping for now", nil)
 			} else {
-				utils.Debug("Port "+port+" is not mapped. Adding it.")
-				finalPorts = append(finalPorts, port + ":" + expectedPort)
+				utils.Debug("Port " + port + " is not mapped. Adding it.")
+				finalPorts = append(finalPorts, port+":"+expectedPort)
 				hasChanged = true
 			}
 		}
@@ -109,7 +109,6 @@ func CheckPorts() error {
 	utils.Log("Port mapping not changed.")
 	return nil
 }
-
 
 func UpdatePorts(finalPorts []string) error {
 	utils.Log("SelUpdatePorts - Starting...")
@@ -131,14 +130,14 @@ func UpdatePorts(finalPorts []string) error {
 	if runtime.GOARCH == "arm64" {
 		version = "latest-arm64"
 	}
-	
+
 	service := DockerServiceCreateRequest{
-		Services: map[string]ContainerCreateRequestContainer {},
+		Services: map[string]ContainerCreateRequestContainer{},
 	}
 
 	service.Services["cosmos-self-updater-agent"] = ContainerCreateRequestContainer{
-		Name: "cosmos-self-updater-agent",
-		Image: "azukaar/docker-self-updater:" + version,
+		Name:          "cosmos-self-updater-agent",
+		Image:         "azukaar/docker-self-updater:" + version,
 		RestartPolicy: "no",
 		SecurityOpt: []string{
 			"label:disable",
@@ -151,18 +150,17 @@ func UpdatePorts(finalPorts []string) error {
 		},
 		Volumes: []mountType.Mount{
 			{
-				Type: mountType.TypeBind,
+				Type:   mountType.TypeBind,
 				Source: "/var/run/docker.sock",
 				Target: "/var/run/docker.sock",
 			},
 		},
-	};
-	
-	
+	}
+
 	utils.Log("SelUpdatePorts - Creating updater service")
 	utils.Log("Creating self-updater service: docker run -d --name cosmos-self-updater-agent -e CONTAINER_NAME=" + containerName + " -e ACTION=ports -e DOCKER_HOST=" + os.Getenv("DOCKER_HOST") + " -e PORTS=" + strings.Join(finalPorts, ",") + " -v /var/run/docker.sock:/var/run/docker.sock azukaar/docker-self-updater:" + version)
 
-	err := CreateService(service, func (msg string) {})
+	err := CreateService(service, func(msg string) {})
 
 	if err != nil {
 		return err

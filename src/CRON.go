@@ -1,15 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"github.com/azukaar/cosmos-server/src/utils"
-	"github.com/azukaar/cosmos-server/src/storage"
-	"github.com/azukaar/cosmos-server/src/docker"
-	"github.com/azukaar/cosmos-server/src/proxy"
 	"os"
 	"path/filepath"
-	"encoding/json"
+
+	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/proxy"
+	"github.com/azukaar/cosmos-server/src/storage"
+	"github.com/azukaar/cosmos-server/src/utils"
 
 	"github.com/jasonlvhit/gocron"
 )
@@ -21,7 +22,7 @@ type Version struct {
 func GetCosmosVersion() string {
 	ex, err := os.Executable()
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 	exPath := filepath.Dir(ex)
 
@@ -54,7 +55,7 @@ func checkVersion() {
 		utils.Error("checkVersion - Could not get version", nil)
 		return
 	}
-	
+
 	response, err := http.Get("https://cosmos-cloud.io/versions/" + myVersion)
 	if err != nil {
 		utils.Error("checkVersion", err)
@@ -92,9 +93,8 @@ func checkCerts() {
 	config := utils.GetMainConfig()
 	HTTPConfig := config.HTTPConfig
 
-	if (
-		HTTPConfig.HTTPSCertificateMode == utils.HTTPSCertModeList["SELFSIGNED"] ||
-		HTTPConfig.HTTPSCertificateMode == utils.HTTPSCertModeList["LETSENCRYPT"]) {
+	if HTTPConfig.HTTPSCertificateMode == utils.HTTPSCertModeList["SELFSIGNED"] ||
+		HTTPConfig.HTTPSCertificateMode == utils.HTTPSCertModeList["LETSENCRYPT"] {
 		utils.Log("Checking certificates for renewal")
 		if !CertificateIsExpiredSoon(HTTPConfig.TLSValidUntil) {
 			utils.Log("Certificates are not valid anymore, renewing")
@@ -120,7 +120,7 @@ func runSnapRAIDScrub(snap utils.SnapRAIDConfig) {
 func CRON() {
 	go func() {
 		// TODO: change to new CRON executor, wth customizable maintenance schedules
-		
+
 		s := gocron.NewScheduler()
 		s.Every(2).Hours().Do(func() {
 			go RunBackup()

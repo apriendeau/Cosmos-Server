@@ -1,15 +1,15 @@
 package constellation
 
 import (
-	"net/http"
-	"net"
 	"encoding/json"
-	"io/ioutil"
-	"os"
-	"strings"	
 	"errors"
-	
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 // TODO: Cache this
@@ -27,7 +27,7 @@ func CheckConstellationToken(req *http.Request) error {
 
 	// remove "Bearer " from auth header
 	auth = strings.Replace(auth, "Bearer ", "", 1)
-	
+
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
 	defer closeDb()
 	if errCo != nil {
@@ -37,15 +37,15 @@ func CheckConstellationToken(req *http.Request) error {
 	utils.Log("DeviceConfigSync: Fetching devices for IP " + ip)
 
 	cursor, err := c.Find(nil, map[string]interface{}{
-		"IP": ip + "/24",
-		"APIKey": auth,
+		"IP":      ip + "/24",
+		"APIKey":  auth,
 		"Blocked": false,
 	})
 	defer cursor.Close(nil)
 	if err != nil {
 		return err
 	}
-	
+
 	// if any device is found, return config without keys
 	if cursor.Next(nil) {
 		return nil
@@ -59,7 +59,7 @@ func API_GetConfig(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		// read utils.CONFIGFOLDER + "nebula.yml"
 		config, err := ioutil.ReadFile(utils.CONFIGFOLDER + "nebula.yml")
 
@@ -68,13 +68,13 @@ func API_GetConfig(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Error while reading nebula.yml", http.StatusInternalServerError, "HTTP002")
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": string(config),
+			"data":   string(config),
 		})
 	} else {
-		utils.Error("SettingGet: Method not allowed" + req.Method, nil)
+		utils.Error("SettingGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -85,17 +85,17 @@ func API_Restart(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		RestartNebula()
 		utils.RestartHTTPServer()
 
 		utils.Log("Constellation: nebula restarted")
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 		})
 	} else {
-		utils.Error("SettingGet: Method not allowed" + req.Method, nil)
+		utils.Error("SettingGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -106,16 +106,16 @@ func API_Reset(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		ResetNebula()
 
 		utils.Log("Constellation: nebula reset")
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 		})
 	} else {
-		utils.Error("SettingGet: Method not allowed" + req.Method, nil)
+		utils.Error("SettingGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -126,19 +126,19 @@ func API_GetLogs(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
-		logs, err := os.ReadFile(utils.CONFIGFOLDER+"nebula.log")
+	if req.Method == "GET" {
+		logs, err := os.ReadFile(utils.CONFIGFOLDER + "nebula.log")
 		if err != nil {
 			utils.Error("Error reading file:", err)
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": string(logs),
+			"data":   string(logs),
 		})
 	} else {
-		utils.Error("API_GetLogs: Method not allowed" + req.Method, nil)
+		utils.Error("API_GetLogs: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -149,15 +149,15 @@ func API_Ping(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		isConnected := PingNATSClient()
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": isConnected,
+			"data":   isConnected,
 		})
 	} else {
-		utils.Error("API_Ping: Method not allowed" + req.Method, nil)
+		utils.Error("API_Ping: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

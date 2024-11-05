@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/azukaar/cosmos-server/src/utils"
-	volumeTypes"github.com/docker/docker/api/types/volume"
+	volumeTypes "github.com/docker/docker/api/types/volume"
+	"github.com/gorilla/mux"
 )
 
 func ListVolumeRoute(w http.ResponseWriter, req *http.Request) {
@@ -19,7 +19,7 @@ func ListVolumeRoute(w http.ResponseWriter, req *http.Request) {
 		errD := Connect()
 		if errD != nil {
 			utils.Error("ManageContainer", errD)
-			utils.HTTPError(w, "Internal server error: " + errD.Error(), http.StatusInternalServerError, "LV001")
+			utils.HTTPError(w, "Internal server error: "+errD.Error(), http.StatusInternalServerError, "LV001")
 			return
 		}
 
@@ -36,7 +36,7 @@ func ListVolumeRoute(w http.ResponseWriter, req *http.Request) {
 			"data":   volumes,
 		})
 	} else {
-		utils.Error("ListVolumeRoute: Method not allowed " + req.Method, nil)
+		utils.Error("ListVolumeRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -63,16 +63,16 @@ func DeleteVolumeRoute(w http.ResponseWriter, req *http.Request) {
 		err := DockerClient.VolumeRemove(context.Background(), volumeName, true)
 		if err != nil {
 			utils.Error("DeleteVolumeRoute: Error while deleting volume", err)
-			utils.HTTPError(w, "Volume Deletion Error " + err.Error(), http.StatusInternalServerError, "DV002")
+			utils.HTTPError(w, "Volume Deletion Error "+err.Error(), http.StatusInternalServerError, "DV002")
 			return
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "OK",
+			"status":  "OK",
 			"message": "Volume deleted successfully",
 		})
 	} else {
-		utils.Error("DeleteVolumeRoute: Method not allowed " + req.Method, nil)
+		utils.Error("DeleteVolumeRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -105,7 +105,7 @@ func CreateVolumeRoute(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Create Docker volume with the provided options
-		volumeOptions := volumeTypes.CreateOptions {
+		volumeOptions := volumeTypes.CreateOptions{
 			Name:   payload.Name,
 			Driver: payload.Driver,
 		}
@@ -122,7 +122,7 @@ func CreateVolumeRoute(w http.ResponseWriter, req *http.Request) {
 			"data":   volume,
 		})
 	} else {
-		utils.Error("CreateVolumeRoute: Method not allowed " + req.Method, nil)
+		utils.Error("CreateVolumeRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -134,7 +134,7 @@ func VolumesRoute(w http.ResponseWriter, req *http.Request) {
 	} else if req.Method == "POST" {
 		CreateVolumeRoute(w, req)
 	} else {
-		utils.Error("VolumesRoute: Method not allowed " + req.Method, nil)
+		utils.Error("VolumesRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

@@ -1,18 +1,18 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
-	"net/http"
-	"path/filepath"
-	"io"
 	"encoding/json"
-	"strings"
 	"fmt"
-	
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/gorilla/mux"
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"github.com/azukaar/cosmos-server/src/docker" 
 )
 
 var validExtensions = map[string]bool{
@@ -31,7 +31,7 @@ func UploadImage(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
 		return
 	}
-	
+
 	vars := mux.Vars(req)
 	originalName := vars["name"]
 
@@ -43,10 +43,10 @@ func UploadImage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "POST") {
+	if req.Method == "POST" {
 		// if the uploads directory does not exist, create it
 		if _, err := os.Stat(utils.CONFIGFOLDER + "/uploads"); os.IsNotExist(err) {
-			os.Mkdir(utils.CONFIGFOLDER + "/uploads", 0750)
+			os.Mkdir(utils.CONFIGFOLDER+"/uploads", 0750)
 		}
 
 		// parse the form data
@@ -63,12 +63,12 @@ func UploadImage(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		defer file.Close()
-		
+
 		// get the file extension
 		ext := filepath.Ext(header.Filename)
-		
+
 		if !validExtensions[ext] {
-			utils.HTTPError(w, "Invalid file extension " + ext, http.StatusBadRequest, "FILE001")
+			utils.HTTPError(w, "Invalid file extension "+ext, http.StatusBadRequest, "FILE001")
 			return
 		}
 
@@ -90,15 +90,15 @@ func UploadImage(w http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 			"data": map[string]interface{}{
-				"path": "/cosmos/api/image/" + name + ext,
-				"filename": header.Filename,
-				"size": header.Size,
+				"path":      "/cosmos/api/image/" + name + ext,
+				"filename":  header.Filename,
+				"size":      header.Size,
 				"extension": ext,
 			},
 		})
 
 	} else {
-		utils.Error("UploadBackground: Method not allowed - " + req.Method, nil)
+		utils.Error("UploadBackground: Method not allowed - "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -116,7 +116,7 @@ func GetImage(w http.ResponseWriter, req *http.Request) {
 
 	// if name includes / or ..
 	if filepath.Clean(name) != name || strings.Contains(name, "/") {
-		utils.Error("GetBackground: Invalid file name - " + name, nil)
+		utils.Error("GetBackground: Invalid file name - "+name, nil)
 		utils.HTTPError(w, "Invalid file name", http.StatusBadRequest, "FILE002")
 		return
 	}
@@ -125,26 +125,26 @@ func GetImage(w http.ResponseWriter, req *http.Request) {
 	ext := filepath.Ext(name)
 
 	if !validExtensions[ext] {
-		utils.Error("GetBackground: Invalid file extension - " + ext, nil)
+		utils.Error("GetBackground: Invalid file extension - "+ext, nil)
 		utils.HTTPError(w, "Invalid file extension", http.StatusBadRequest, "FILE001")
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		// get the background image
 		bg, err := ioutil.ReadFile(utils.CONFIGFOLDER + "/uploads/" + name)
 		if err != nil {
-			utils.Error("GetBackground: Error reading image - " + name, err)
+			utils.Error("GetBackground: Error reading image - "+name, err)
 			utils.HTTPError(w, "Error reading image", http.StatusInternalServerError, "FILE003")
 			return
 		}
 
 		// return a response to the client
-		w.Header().Set("Content-Type", "image/" + ext)
+		w.Header().Set("Content-Type", "image/"+ext)
 		w.Write(bg)
 
 	} else {
-		utils.Error("GetBackground: Method not allowed - " + req.Method, nil)
+		utils.Error("GetBackground: Method not allowed - "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -158,7 +158,7 @@ func imageCleanUp() {
 	images[config.HomepageConfig.Background] = true
 
 	for _, route := range config.HTTPConfig.ProxyConfig.Routes {
-		if(route.Icon != "") {
+		if route.Icon != "" {
 			images[route.Icon] = true
 		}
 	}
@@ -172,7 +172,7 @@ func imageCleanUp() {
 	}
 
 	for _, container := range containers {
-		if(container.Labels["cosmos-icon"] != "") {
+		if container.Labels["cosmos-icon"] != "" {
 			images[container.Labels["cosmos-icon"]] = true
 		}
 	}
@@ -194,7 +194,7 @@ func imageCleanUp() {
 	// loop through the files
 	base := "/cosmos/api/image/"
 	for _, f := range files {
-		if(!images[base + f.Name()]) {
+		if !images[base+f.Name()] {
 			err := os.Remove(utils.CONFIGFOLDER + "/uploads/" + f.Name())
 			if err != nil {
 				utils.Error("Image cleanup: Error removing file", err)
@@ -211,7 +211,7 @@ func MigratePre013() {
 	utils.Debug("MigratePre013: background is" + bg)
 
 	// if the background start with /cosmos/api/background/
-	if(strings.HasPrefix(bg, "/cosmos/api/background/")) {
+	if strings.HasPrefix(bg, "/cosmos/api/background/") {
 		// get the background name
 		ext := strings.TrimPrefix(bg, "/cosmos/api/background/")
 		bgPath := utils.CONFIGFOLDER + "/background." + ext
@@ -221,7 +221,7 @@ func MigratePre013() {
 		// if the background file exists
 		if _, err := os.Stat(bgPath); err == nil {
 			// move the background file to uploads
-			err := os.Rename(bgPath, utils.CONFIGFOLDER + "/uploads/background." + ext)
+			err := os.Rename(bgPath, utils.CONFIGFOLDER+"/uploads/background."+ext)
 			if err != nil {
 				utils.Error("MigratePre013: Error moving background file", err)
 			}

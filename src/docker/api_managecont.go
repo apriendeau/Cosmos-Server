@@ -1,16 +1,16 @@
 package docker
 
 import (
-	"net/http"
-	"encoding/json"
-	"os"
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
-	
-	"github.com/gorilla/mux"
+	"github.com/azukaar/cosmos-server/src/utils"
+
 	contstuff "github.com/docker/docker/api/types/container"
+	"github.com/gorilla/mux"
 )
 
 func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
@@ -21,7 +21,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 	errD := Connect()
 	if errD != nil {
 		utils.Error("ManageContainer", errD)
-		utils.HTTPError(w, "Internal server error: " + errD.Error(), http.StatusInternalServerError, "DS002")
+		utils.HTTPError(w, "Internal server error: "+errD.Error(), http.StatusInternalServerError, "DS002")
 		return
 	}
 
@@ -29,7 +29,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 	containerName := utils.SanitizeSafe(vars["containerId"])
 	// stop, start, restart, kill, remove, pause, unpause, recreate
 	action := utils.Sanitize(vars["action"])
-	
+
 	if utils.IsInsideContainer && containerName == os.Getenv("HOSTNAME") && action != "update" && action != "recreate" {
 		utils.Error("ManageContainer - Container cannot update itself", nil)
 		utils.HTTPError(w, "Container cannot update itself", http.StatusBadRequest, "DS003")
@@ -42,7 +42,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 		container, err := DockerClient.ContainerInspect(DockerContext, containerName)
 		if err != nil {
 			utils.Error("ManageContainer", err)
-			utils.HTTPError(w, "Internal server error: " + err.Error(), http.StatusInternalServerError, "DS002")
+			utils.HTTPError(w, "Internal server error: "+err.Error(), http.StatusInternalServerError, "DS002")
 			return
 		}
 
@@ -76,7 +76,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 			defer out.Close()
-			
+
 			// Enable streaming of response by setting appropriate headers
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			w.Header().Set("Transfer-Encoding", "chunked")
@@ -93,7 +93,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 			scanner := bufio.NewScanner(out)
 			for scanner.Scan() {
 				utils.Log(scanner.Text())
-				fmt.Fprintf(w, scanner.Text() + "\n")
+				fmt.Fprintf(w, scanner.Text()+"\n")
 				flusher.Flush()
 			}
 
@@ -107,7 +107,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			utils.UpdateAvailable["/" + containerName] = false
+			utils.UpdateAvailable["/"+containerName] = false
 			fmt.Fprintf(w, "[OPERATION SUCCEEDED]")
 			flusher.Flush()
 			return
@@ -117,8 +117,8 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if err != nil {
-			utils.Error("ManageContainer: " + action, err)
-			utils.HTTPError(w, "Internal server error: " + err.Error(), http.StatusInternalServerError, "DS004")
+			utils.Error("ManageContainer: "+action, err)
+			utils.HTTPError(w, "Internal server error: "+err.Error(), http.StatusInternalServerError, "DS004")
 			return
 		}
 
@@ -126,7 +126,7 @@ func ManageContainerRoute(w http.ResponseWriter, req *http.Request) {
 			"status": "OK",
 		})
 	} else {
-		utils.Error("ManageContainer: Method not allowed" + req.Method, nil)
+		utils.Error("ManageContainer: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

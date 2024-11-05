@@ -6,7 +6,6 @@ import (
 	"strconv"
 )
 
-
 func LoggedInOnlyWithRedirect(w http.ResponseWriter, req *http.Request) error {
 	userNickname := req.Header.Get("x-cosmos-user")
 	role, _ := strconv.Atoi(req.Header.Get("x-cosmos-role"))
@@ -19,11 +18,11 @@ func LoggedInOnlyWithRedirect(w http.ResponseWriter, req *http.Request) error {
 		return errors.New("User not logged in")
 	}
 
-	if(mfa == 1) {
-		http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	if mfa == 1 {
+		http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 		return errors.New("User requires MFA")
-	} else if(mfa == 2) {
-		http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	} else if mfa == 2 {
+		http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 		return errors.New("User requires MFA Setup")
 	}
 
@@ -49,11 +48,11 @@ func AdminOnlyWithRedirect(w http.ResponseWriter, req *http.Request) error {
 		return errors.New("User is not Admin")
 	}
 
-	if(mfa == 1) {
-		http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	if mfa == 1 {
+		http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 		return errors.New("User requires MFA")
-	} else if(mfa == 2) {
-		http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	} else if mfa == 2 {
+		http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 		return errors.New("User requires MFA Setup")
 	}
 
@@ -98,10 +97,10 @@ func LoggedInOnly(w http.ResponseWriter, req *http.Request) error {
 		return errors.New("User not logged in")
 	}
 
-	if(mfa == 1) {
+	if mfa == 1 {
 		HTTPError(w, "User not logged in (MFA)", http.StatusUnauthorized, "HTTP006")
 		return errors.New("User requires MFA")
-	} else if(mfa == 2) {
+	} else if mfa == 2 {
 		HTTPError(w, "User requires MFA Setup", http.StatusUnauthorized, "HTTP007")
 		return errors.New("User requires MFA Setup")
 	}
@@ -129,10 +128,10 @@ func AdminOnly(w http.ResponseWriter, req *http.Request) error {
 		return errors.New("User not Admin")
 	}
 
-	if(mfa == 1) {
+	if mfa == 1 {
 		HTTPError(w, "User not logged in (MFA)", http.StatusUnauthorized, "HTTP006")
 		return errors.New("User requires MFA")
-	} else if(mfa == 2) {
+	} else if mfa == 2 {
 		HTTPError(w, "User requires MFA Setup", http.StatusUnauthorized, "HTTP007")
 		return errors.New("User requires MFA Setup")
 	}
@@ -164,10 +163,10 @@ func AdminOrItselfOnly(w http.ResponseWriter, req *http.Request, nickname string
 		return errors.New("User not Admin")
 	}
 
-	if(mfa == 1) {
+	if mfa == 1 {
 		HTTPError(w, "User not logged in (MFA)", http.StatusUnauthorized, "HTTP006")
 		return errors.New("User requires MFA")
-	} else if(mfa == 2) {
+	} else if mfa == 2 {
 		HTTPError(w, "User requires MFA Setup", http.StatusUnauthorized, "HTTP007")
 		return errors.New("User requires MFA Setup")
 	}

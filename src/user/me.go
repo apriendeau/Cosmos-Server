@@ -1,15 +1,14 @@
 package user
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
-
 func Me(w http.ResponseWriter, req *http.Request) {
-  if (req.Method == "GET") {
+	if req.Method == "GET" {
 		if utils.LoggedInOnly(w, req) != nil {
 			return
 		}
@@ -17,11 +16,11 @@ func Me(w http.ResponseWriter, req *http.Request) {
 		nickname := req.Header.Get("x-cosmos-user")
 
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  	defer closeDb()
+		defer closeDb()
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		user := utils.User{}
@@ -39,13 +38,13 @@ func Me(w http.ResponseWriter, req *http.Request) {
 		user.Link = "/api/user/" + user.Nickname
 		user.Email = ""
 		user.RegisterKey = ""
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": user,
+			"data":   user,
 		})
 	} else {
-		utils.Error("UserRoute: Method not allowed" + req.Method, nil)
+		utils.Error("UserRoute: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

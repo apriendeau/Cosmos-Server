@@ -1,26 +1,26 @@
 package user
 
 import (
-	"net/http"
-	"math/rand"
 	"encoding/json"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 	"golang.org/x/crypto/bcrypt"
+	"math/rand"
+	"net/http"
+	"time"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 type RegisterRequestJSON struct {
-	Nickname string `validate:"required,min=3,max=32,alphanum"`
-	Password string `validate:"required,min=9,max=128,containsany=~!@#$%^&*()_+=-{[}]:;"'<>.?/,containsany=ABCDEFGHIJKLMNOPQRSTUVWXYZ,containsany=abcdefghijklmnopqrstuvwxyz,containsany=0123456789"`
+	Nickname    string `validate:"required,min=3,max=32,alphanum"`
+	Password    string `validate:"required,min=9,max=128,containsany=~!@#$%^&*()_+=-{[}]:;"'<>.?/,containsany=ABCDEFGHIJKLMNOPQRSTUVWXYZ,containsany=abcdefghijklmnopqrstuvwxyz,containsany=0123456789"`
 	RegisterKey string `validate:"required,min=1,max=512,alphanum"`
 }
 
 func UserRegister(w http.ResponseWriter, req *http.Request) {
-	if(req.Method == "POST") {
-		time.Sleep(time.Duration(rand.Float64()*2)*time.Second)
-		
+	if req.Method == "POST" {
+		time.Sleep(time.Duration(rand.Float64()*2) * time.Second)
+
 		var request RegisterRequestJSON
 		err1 := json.NewDecoder(req.Body).Decode(&request)
 		if err1 != nil {
@@ -32,7 +32,7 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 		errV := utils.Validate.Struct(request)
 		if errV != nil {
 			utils.Error("UserRegister: Invalid User Request", errV)
-			utils.HTTPError(w, "User Register Error: " + errV.Error(), http.StatusInternalServerError, "UR002")
+			utils.HTTPError(w, "User Register Error: "+errV.Error(), http.StatusInternalServerError, "UR002")
 			return
 		}
 
@@ -41,7 +41,7 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 		registerKey := request.RegisterKey
 
 		utils.Debug("UserRegister: Registering user " + nickname)
-				
+
 		hashedPassword, err2 := bcrypt.GenerateFromPassword([]byte(password), 14)
 
 		if err2 != nil {
@@ -51,17 +51,17 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 		}
 
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
+		defer closeDb()
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		user := utils.User{}
 
 		err3 := c.FindOne(nil, map[string]interface{}{
-			"Nickname": nickname,
+			"Nickname":    nickname,
 			"RegisterKey": registerKey,
 		}).Decode(&user)
 
@@ -83,16 +83,16 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 				RegisteredAt = time.Now()
 			}
 			_, err4 := c.UpdateOne(nil, map[string]interface{}{
-				"Nickname": nickname,
+				"Nickname":    nickname,
 				"RegisterKey": registerKey,
 			}, map[string]interface{}{
 				"$set": map[string]interface{}{
-					"Password": hashedPassword,
-					"RegisterKey": "",
-					"RegisterKeyExp": time.Time{},
-					"RegisteredAt": RegisteredAt,
+					"Password":              hashedPassword,
+					"RegisterKey":           "",
+					"RegisterKeyExp":        time.Time{},
+					"RegisteredAt":          RegisteredAt,
 					"LastPasswordChangedAt": time.Now(),
-					"PasswordCycle": user.PasswordCycle + 1,
+					"PasswordCycle":         user.PasswordCycle + 1,
 				},
 			})
 
@@ -102,7 +102,7 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 		}
-		
+
 		utils.TriggerEvent(
 			"cosmos.user.register",
 			"User registered",
@@ -110,15 +110,15 @@ func UserRegister(w http.ResponseWriter, req *http.Request) {
 			"",
 			map[string]interface{}{
 				"nickname": nickname,
-		})
+			})
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 		})
-		
+
 		go utils.ResyncConstellationNodes()
 	} else {
-		utils.Error("UserRegister: Method not allowed" + req.Method, nil)
+		utils.Error("UserRegister: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

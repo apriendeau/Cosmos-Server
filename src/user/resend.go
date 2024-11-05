@@ -1,12 +1,12 @@
 package user
 
 import (
-	"net/http"
 	"encoding/json"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 	"time"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 type InviteRequestJSON struct {
@@ -15,7 +15,7 @@ type InviteRequestJSON struct {
 }
 
 func UserResendInviteLink(w http.ResponseWriter, req *http.Request) {
-	if(req.Method == "POST") {
+	if req.Method == "POST" {
 		var request InviteRequestJSON
 		err1 := json.NewDecoder(req.Body).Decode(&request)
 		if err1 != nil {
@@ -31,13 +31,13 @@ func UserResendInviteLink(w http.ResponseWriter, req *http.Request) {
 		}
 
 		utils.Debug("Re-Sending an invite to " + nickname)
-		
+
 		c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
+		defer closeDb()
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		user := utils.User{}
@@ -66,7 +66,7 @@ func UserResendInviteLink(w http.ResponseWriter, req *http.Request) {
 			}, map[string]interface{}{
 				"$set": map[string]interface{}{
 					"RegisterKeyExp": RegisterKeyExp,
-					"RegisterKey": RegisterKey,
+					"RegisterKey":    RegisterKey,
 				},
 			})
 
@@ -80,10 +80,10 @@ func UserResendInviteLink(w http.ResponseWriter, req *http.Request) {
 
 			if utils.IsEmailEnabled() && user.Email != "" {
 				utils.Debug("Sending an email to " + user.Email)
-				url := utils.GetServerURL("") + ("cosmos-ui/register?t="+request.FormType+"&nickname="+user.Nickname+"&key=" + RegisterKey)
-				
-				var errEm error 
-				
+				url := utils.GetServerURL("") + ("cosmos-ui/register?t=" + request.FormType + "&nickname=" + user.Nickname + "&key=" + RegisterKey)
+
+				var errEm error
+
 				if request.FormType == "2" {
 					errEm = SendInviteEmail(user.Nickname, user.Email, url)
 				} else {
@@ -99,14 +99,14 @@ func UserResendInviteLink(w http.ResponseWriter, req *http.Request) {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"status": "OK",
 				"data": map[string]interface{}{
-					"registerKey": RegisterKey,
+					"registerKey":    RegisterKey,
 					"registerKeyExp": RegisterKeyExp,
-					"emailWasSent": emailWasSent,
+					"emailWasSent":   emailWasSent,
 				},
 			})
 		}
 	} else {
-		utils.Error("UserInvite: Method not allowed" + req.Method, nil)
+		utils.Error("UserInvite: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

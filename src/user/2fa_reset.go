@@ -15,7 +15,7 @@ func Delete2FA(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
 		return
 	}
-	
+
 	var request User2FAResetRequest
 	errD := json.NewDecoder(req.Body).Decode(&request)
 	if errD != nil {
@@ -27,13 +27,13 @@ func Delete2FA(w http.ResponseWriter, req *http.Request) {
 	nickname := request.Nickname
 
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
+	defer closeDb()
 	if errCo != nil {
 		utils.Error("Database Connect", errCo)
 		utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
 		return
 	}
-	
+
 	userInBase := utils.User{}
 
 	err := c.FindOne(nil, map[string]interface{}{
@@ -45,11 +45,11 @@ func Delete2FA(w http.ResponseWriter, req *http.Request) {
 		utils.HTTPError(w, "User Get Error", http.StatusInternalServerError, "2FA002")
 		return
 	}
-	
+
 	toSet := map[string]interface{}{
 		"Was2FAVerified": false,
-		"MFAKey": "",
-		"PasswordCycle": userInBase.PasswordCycle + 1,
+		"MFAKey":         "",
+		"PasswordCycle":  userInBase.PasswordCycle + 1,
 	}
 
 	_, err = c.UpdateOne(nil, map[string]interface{}{

@@ -1,19 +1,19 @@
 package utils
 
 import (
-	"log"
 	"fmt"
+	"log"
 )
 
-var Reset  = "\033[0m"
-var Red    = "\033[31m"
-var Green  = "\033[32m"
+var Reset = "\033[0m"
+var Red = "\033[31m"
+var Green = "\033[32m"
 var Yellow = "\033[33m"
-var Blue   = "\033[34m"
+var Blue = "\033[34m"
 var Purple = "\033[35m"
-var Cyan   = "\033[36m"
-var Gray   = "\033[37m"
-var White  = "\033[97m"
+var Cyan = "\033[36m"
+var Gray = "\033[37m"
+var White = "\033[97m"
 
 func Debug(message string) {
 	ll := LoggingLevelLabels[GetMainConfig().LoggingLevel]
@@ -56,7 +56,7 @@ func MajorError(message string, err error) {
 	if ll <= ERROR {
 		log.Println(Red + "[ERROR] " + message + " : " + errStr + Reset)
 	}
-	
+
 	TriggerEvent(
 		"cosmos.error",
 		"Critical Error",
@@ -64,15 +64,15 @@ func MajorError(message string, err error) {
 		"",
 		map[string]interface{}{
 			"message": message,
-			"error": errStr,
-	})
+			"error":   errStr,
+		})
 
 	WriteNotification(Notification{
 		Recipient: "admin",
-		Title: "header.notification.title.serverError",
-		Message: message + " : " + errStr,
-		Vars: "",
-		Level: "error",
+		Title:     "header.notification.title.serverError",
+		Message:   message + " : " + errStr,
+		Vars:      "",
+		Level:     "error",
 	})
 }
 

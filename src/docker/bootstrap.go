@@ -1,12 +1,12 @@
 package docker
 
-import (	
-	"github.com/azukaar/cosmos-server/src/utils" 
+import (
+	"fmt"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/docker/docker/api/types"
 	"os"
-	"fmt"
 	"regexp"
-	
+
 	conttype "github.com/docker/docker/api/types/container"
 )
 
@@ -22,7 +22,7 @@ func BootstrapAllContainersFromTags() []error {
 	}
 
 	errors := []error{}
-	
+
 	containers, err := DockerClient.ContainerList(DockerContext, conttype.ListOptions{})
 	if err != nil {
 		utils.Error("Docker Container List", err)
@@ -43,7 +43,7 @@ func BootstrapAllContainersFromTags() []error {
 func UnsecureContainer(container types.ContainerJSON) (string, error) {
 	RemoveLabels(container, []string{
 		"cosmos-force-network-secured",
-	});
+	})
 	return EditContainer(container.ID, container, false)
 }
 
@@ -60,7 +60,7 @@ func BootstrapContainerFromTags(containerID string) error {
 
 	selfContainer := types.ContainerJSON{}
 	if utils.IsInsideContainer {
-		var errS error 
+		var errS error
 		selfContainer, errS = DockerClient.ContainerInspect(DockerContext, os.Getenv("HOSTNAME"))
 		if errS != nil {
 			utils.Error("DockerContainerBootstrapSelfInspect", errS)
@@ -78,17 +78,17 @@ func BootstrapContainerFromTags(containerID string) error {
 
 	// check if any route has been added to the container
 	config := utils.GetMainConfig()
-	if(!HasLabel(container, "cosmos-network-name")) {
+	if !HasLabel(container, "cosmos-network-name") {
 		for _, route := range config.HTTPConfig.ProxyConfig.Routes {
-				utils.Debug("No cosmos-network-name label on container "+container.Name)
-				pattern := fmt.Sprintf(`(?i)^(([a-z]+):\/\/)?%s(:?[0-9]+)?$`, container.Name[1:])
-				match, _ := regexp.MatchString(pattern, route.Target)
-				if route.Mode == "SERVAPP" && match {
-					utils.Log("Adding cosmos-network-name label to container "+container.Name)
-					AddLabels(container, map[string]string{
-						"cosmos-network-name": "auto",
-					})	
-				}
+			utils.Debug("No cosmos-network-name label on container " + container.Name)
+			pattern := fmt.Sprintf(`(?i)^(([a-z]+):\/\/)?%s(:?[0-9]+)?$`, container.Name[1:])
+			match, _ := regexp.MatchString(pattern, route.Target)
+			if route.Mode == "SERVAPP" && match {
+				utils.Log("Adding cosmos-network-name label to container " + container.Name)
+				AddLabels(container, map[string]string{
+					"cosmos-network-name": "auto",
+				})
+			}
 		}
 	}
 
@@ -100,7 +100,7 @@ func BootstrapContainerFromTags(containerID string) error {
 
 	// 	// check if connected to bridge and to a cosmos network
 	// 	isCon := IsConnectedToNetwork(container, "bridge")
-		
+
 	// 	if isCon || !isCosmosCon {
 	// 		utils.Log(container.Name+": Needs isolating on a secured network")
 	// 		needsRestart := false
@@ -126,7 +126,7 @@ func BootstrapContainerFromTags(containerID string) error {
 	// 		}
 	// 		if !needsRestart && isCon {
 	// 			utils.Log(container.Name+": Disconnecting from bridge network")
-	// 			errDisc := DockerClient.NetworkDisconnect(DockerContext, "bridge", containerID, true) 
+	// 			errDisc := DockerClient.NetworkDisconnect(DockerContext, "bridge", containerID, true)
 	// 			if errDisc != nil {
 	// 				utils.Warn("DockerContainerBootstrapDisconnectFromBridge -- Cannot disconnect from Bridge, removing force secure")
 	// 				_, errUn := UnsecureContainer(container)
@@ -141,13 +141,13 @@ func BootstrapContainerFromTags(containerID string) error {
 
 	// 	if(len(GetAllPorts(container)) > 0) {
 	// 		utils.Log("Removing unsecure ports bindings from "+container.Name)
-	// 		// remove all ports			
+	// 		// remove all ports
 	// 		UnexposeAllPorts(&container)
 	// 		needsUpdate = true
 	// 	}
 	// }
-	
-	if(needsUpdate) {
+
+	if needsUpdate {
 		_, errEdit := EditContainer(containerID, container, false)
 		if errEdit != nil {
 			utils.Error("Docker Boostrap, couldn't update container: ", errEdit)

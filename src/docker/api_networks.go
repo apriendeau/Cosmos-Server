@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/docker/docker/api/types"
 	network "github.com/docker/docker/api/types/network"
+	"github.com/gorilla/mux"
 )
 
 func ListNetworksRoute(w http.ResponseWriter, req *http.Request) {
@@ -29,7 +29,7 @@ func ListNetworksRoute(w http.ResponseWriter, req *http.Request) {
 		networks, err := DockerClient.NetworkList(context.Background(), types.NetworkListOptions{})
 		if err != nil {
 			utils.Error("ListNetworksRoute: Error while getting networks", err)
-			utils.HTTPError(w, "Networks Get Error: " + err.Error(), http.StatusInternalServerError, "LN002")
+			utils.HTTPError(w, "Networks Get Error: "+err.Error(), http.StatusInternalServerError, "LN002")
 			return
 		}
 
@@ -38,12 +38,11 @@ func ListNetworksRoute(w http.ResponseWriter, req *http.Request) {
 			"data":   networks,
 		})
 	} else {
-		utils.Error("ListNetworksRoute: Method not allowed " + req.Method, nil)
+		utils.Error("ListNetworksRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
-
 
 func DeleteNetworkRoute(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
@@ -85,16 +84,16 @@ func DeleteNetworkRoute(w http.ResponseWriter, req *http.Request) {
 		err = DockerClient.NetworkRemove(context.Background(), networkID)
 		if err != nil {
 			utils.Error("DeleteNetworkRoute: Error while deleting network", err)
-			utils.HTTPError(w, "Network Deletion Error: " + err.Error(), http.StatusInternalServerError, "DN002")
+			utils.HTTPError(w, "Network Deletion Error: "+err.Error(), http.StatusInternalServerError, "DN002")
 			return
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "OK",
+			"status":  "OK",
 			"message": "Network deleted successfully",
 		})
 	} else {
-		utils.Error("DeleteNetworkRoute: Method not allowed " + req.Method, nil)
+		utils.Error("DeleteNetworkRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -105,10 +104,10 @@ func NetworkContainerRoutes(w http.ResponseWriter, req *http.Request) {
 		ListContainerNetworks(w, req)
 	} else if req.Method == "DELETE" {
 		DetachNetwork(w, req)
-		} else if req.Method == "POST" {
+	} else if req.Method == "POST" {
 		AttachNetwork(w, req)
 	} else {
-		utils.Error("NetworkContainerRoutes: Method not allowed " + req.Method, nil)
+		utils.Error("NetworkContainerRoutes: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -120,7 +119,7 @@ func NetworkRoutes(w http.ResponseWriter, req *http.Request) {
 	} else if req.Method == "POST" {
 		CreateNetworkRoute(w, req)
 	} else {
-		utils.Error("NetworkContainerRoutes: Method not allowed " + req.Method, nil)
+		utils.Error("NetworkContainerRoutes: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -151,7 +150,7 @@ func AttachNetwork(w http.ResponseWriter, req *http.Request) {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "OK",
+			"status":  "OK",
 			"message": "Network attached successfully",
 		})
 	} else {
@@ -192,7 +191,7 @@ func DetachNetwork(w http.ResponseWriter, req *http.Request) {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "OK",
+			"status":  "OK",
 			"message": "Network detached successfully",
 		})
 	} else {
@@ -222,7 +221,7 @@ func ListContainerNetworks(w http.ResponseWriter, req *http.Request) {
 		networks, err := DockerClient.NetworkList(context.Background(), types.NetworkListOptions{})
 		if err != nil {
 			utils.Error("ListNetworksRoute: Error while getting networks", err)
-			utils.HTTPError(w, "Networks Get Error: " + err.Error(), http.StatusInternalServerError, "LN002")
+			utils.HTTPError(w, "Networks Get Error: "+err.Error(), http.StatusInternalServerError, "LN002")
 			return
 		}
 
@@ -237,23 +236,23 @@ func ListContainerNetworks(w http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 			"data": map[string]interface{}{
-				"networks": networks,
+				"networks":          networks,
 				"containerNetworks": containerNetworks,
 			},
 		})
 	} else {
-		utils.Error("ListContainerNetworks: Method not allowed " + req.Method, nil)
+		utils.Error("ListContainerNetworks: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
 
 type createNetworkPayload struct {
-	Name   string `json:"name"`
-	Driver string `json:"driver"`
-	AttachCosmos bool `json:"attachCosmos"`
+	Name            string `json:"name"`
+	Driver          string `json:"driver"`
+	AttachCosmos    bool   `json:"attachCosmos"`
 	ParentInterface string `json:"parentInterface"`
-	Subnet string `json:"subnet"`
+	Subnet          string `json:"subnet"`
 }
 
 func CreateNetworkRoute(w http.ResponseWriter, req *http.Request) {
@@ -299,7 +298,7 @@ func CreateNetworkRoute(w http.ResponseWriter, req *http.Request) {
 		resp, err := CreateReasonableNetwork(payload.Name, networkCreate)
 		if err != nil {
 			utils.Error("CreateNetworkRoute: Error while creating network", err)
-			utils.HTTPError(w, "Network Create Error: " + err.Error(), http.StatusInternalServerError, "CN004")
+			utils.HTTPError(w, "Network Create Error: "+err.Error(), http.StatusInternalServerError, "CN004")
 			return
 		}
 
@@ -308,7 +307,7 @@ func CreateNetworkRoute(w http.ResponseWriter, req *http.Request) {
 			err = AttachNetworkToCosmos(resp.ID)
 			if err != nil {
 				utils.Error("CreateNetworkRoute: Error while attaching network to cosmos", err)
-				utils.HTTPError(w, "Network Attach Error: " + err.Error(), http.StatusInternalServerError, "CN005")
+				utils.HTTPError(w, "Network Attach Error: "+err.Error(), http.StatusInternalServerError, "CN005")
 				return
 			}
 		}
@@ -318,7 +317,7 @@ func CreateNetworkRoute(w http.ResponseWriter, req *http.Request) {
 			"data":   resp,
 		})
 	} else {
-		utils.Error("CreateNetworkRoute: Method not allowed " + req.Method, nil)
+		utils.Error("CreateNetworkRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

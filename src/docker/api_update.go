@@ -1,14 +1,14 @@
 package docker
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
-	"net/http"
 	"fmt"
-	"bufio"
+	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/azukaar/cosmos-server/src/utils"
+	"github.com/gorilla/mux"
 )
 
 func PullImageIfMissing(w http.ResponseWriter, req *http.Request) {
@@ -25,26 +25,26 @@ func PullImageIfMissing(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Internal server error: "+errD.Error(), http.StatusInternalServerError, "LN001")
 			return
 		}
-	
+
 		// Enable streaming of response by setting appropriate headers
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Transfer-Encoding", "chunked")
 
 		flusher, ok := w.(http.Flusher)
-    if !ok {
-        http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-        return
-    }
-		
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+
 		_, _, errImage := DockerClient.ImageInspectWithRaw(DockerContext, imageName)
 		if errImage != nil {
 			utils.Log("PullImageIfMissing - Image not found, pulling " + imageName)
-			fmt.Fprintf(w, "PullImageIfMissing - Image not found, pulling " + imageName + "\n")
+			fmt.Fprintf(w, "PullImageIfMissing - Image not found, pulling "+imageName+"\n")
 			flusher.Flush()
 			out, errPull := DockerPullImage(imageName)
 			if errPull != nil {
 				utils.Error("PullImageIfMissing - Image not found.", errPull)
-				fmt.Fprintf(w, "[OPERATION FAILED] PullImageIfMissing - Image not found. " + errPull.Error() + "\n")
+				fmt.Fprintf(w, "[OPERATION FAILED] PullImageIfMissing - Image not found. "+errPull.Error()+"\n")
 				flusher.Flush()
 				return
 			}
@@ -54,7 +54,7 @@ func PullImageIfMissing(w http.ResponseWriter, req *http.Request) {
 			scanner := bufio.NewScanner(out)
 			for scanner.Scan() {
 				utils.Log(scanner.Text())
-				fmt.Fprintf(w, scanner.Text() + "\n")
+				fmt.Fprintf(w, scanner.Text()+"\n")
 				flusher.Flush()
 			}
 
@@ -63,12 +63,12 @@ func PullImageIfMissing(w http.ResponseWriter, req *http.Request) {
 			flusher.Flush()
 			return
 		}
-		
+
 		utils.Log("PullImageIfMissing - Image found, skipping " + imageName)
 		fmt.Fprintf(w, "[OPERATION SUCCEEDED]")
 		flusher.Flush()
 	} else {
-		utils.Error("PullImageIfMissing: Method not allowed " + req.Method, nil)
+		utils.Error("PullImageIfMissing: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -88,24 +88,24 @@ func PullImage(w http.ResponseWriter, req *http.Request) {
 			utils.HTTPError(w, "Internal server error: "+errD.Error(), http.StatusInternalServerError, "LN001")
 			return
 		}
-	
+
 		// Enable streaming of response by setting appropriate headers
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Transfer-Encoding", "chunked")
 
 		flusher, ok := w.(http.Flusher)
-    if !ok {
-        http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-        return
-    }
-		
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+
 		utils.Log("PullImageIfMissing - Image not found, pulling " + imageName)
-		fmt.Fprintf(w, "PullImageIfMissing - Image not found, pulling " + imageName + "\n")
+		fmt.Fprintf(w, "PullImageIfMissing - Image not found, pulling "+imageName+"\n")
 		flusher.Flush()
 		out, errPull := DockerPullImage(imageName)
 		if errPull != nil {
 			utils.Error("PullImageIfMissing - Image not found.", errPull)
-			fmt.Fprintf(w, "[OPERATION FAILED] PullImageIfMissing - Image not found. " + errPull.Error() + "\n")
+			fmt.Fprintf(w, "[OPERATION FAILED] PullImageIfMissing - Image not found. "+errPull.Error()+"\n")
 			flusher.Flush()
 			return
 		}
@@ -115,7 +115,7 @@ func PullImage(w http.ResponseWriter, req *http.Request) {
 		scanner := bufio.NewScanner(out)
 		for scanner.Scan() {
 			utils.Log(scanner.Text())
-			fmt.Fprintf(w, scanner.Text() + "\n")
+			fmt.Fprintf(w, scanner.Text()+"\n")
 			flusher.Flush()
 		}
 
@@ -124,7 +124,7 @@ func PullImage(w http.ResponseWriter, req *http.Request) {
 		flusher.Flush()
 		return
 	} else {
-		utils.Error("PullImageIfMissing: Method not allowed " + req.Method, nil)
+		utils.Error("PullImageIfMissing: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -150,7 +150,7 @@ func CanUpdateImageRoute(w http.ResponseWriter, req *http.Request) {
 		container, err := DockerClient.ContainerInspect(context.Background(), containerId)
 		if err != nil {
 			utils.Error("CanUpdateImageRoute: Error while getting container", err)
-			utils.HTTPError(w, "Container Get Error: " + err.Error(), http.StatusInternalServerError, "LN002")
+			utils.HTTPError(w, "Container Get Error: "+err.Error(), http.StatusInternalServerError, "LN002")
 			return
 		}
 
@@ -160,7 +160,7 @@ func CanUpdateImageRoute(w http.ResponseWriter, req *http.Request) {
 		image, _, err := DockerClient.ImageInspectWithRaw(context.Background(), imageName)
 		if err != nil {
 			utils.Error("CanUpdateImageRoute: Error while inspecting image", err)
-			utils.HTTPError(w, "Image Inspection Error: " + err.Error(), http.StatusInternalServerError, "LN003")
+			utils.HTTPError(w, "Image Inspection Error: "+err.Error(), http.StatusInternalServerError, "LN003")
 			return
 		}
 		if len(image.RepoDigests) > 0 {
@@ -172,9 +172,8 @@ func CanUpdateImageRoute(w http.ResponseWriter, req *http.Request) {
 			"data":   canUpdate,
 		})
 	} else {
-		utils.Error("CanUpdateImageRoute: Method not allowed " + req.Method, nil)
+		utils.Error("CanUpdateImageRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
-

@@ -1,20 +1,20 @@
 package docker
 
 import (
-	"os"
-	"time"
 	"errors"
-	"sync"
-	"net"
 	"fmt"
+	"net"
+	"os"
+	"sync"
+	"time"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"github.com/docker/docker/api/types/filters"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/docker/docker/api/types"
 	conttype "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	network "github.com/docker/docker/api/types/network"
 	natting "github.com/docker/go-connections/nat"
-	
+
 	"encoding/binary"
 )
 
@@ -48,7 +48,7 @@ func doesSubnetOverlap(networks []types.NetworkResource, subnet string) bool {
 		for _, config := range network.IPAM.Config {
 			_, existingNet, _ := net.ParseCIDR(config.Subnet)
 			maskSize, _ := ipnet.Mask.Size()
-			if existingNet.Contains(ipnet.IP) || existingNet.Contains(intToIP(ipToInt(ipnet.IP) + uint32(1<<(32-maskSize)) - 1)) {
+			if existingNet.Contains(ipnet.IP) || existingNet.Contains(intToIP(ipToInt(ipnet.IP)+uint32(1<<(32-maskSize))-1)) {
 				return true
 			}
 		}
@@ -87,7 +87,7 @@ func CreateReasonableNetwork(name string, networkDef types.NetworkCreate) (types
 			Driver: "default",
 		}
 	}
-	
+
 	if len(networkDef.IPAM.Config) == 0 {
 		subnets, err := findAvailableSubnets(1)
 		if err != nil {
@@ -137,7 +137,7 @@ func CreateCosmosNetwork(name string) (string, error) {
 	}
 
 	utils.Log("Creating new secure network: " + newNeworkName)
-	
+
 	subnet, err := findAvailableSubnets(1)
 	if err != nil {
 		utils.Error("Docker Network Create", err)
@@ -167,12 +167,12 @@ func CreateCosmosNetwork(name string) (string, error) {
 	return newNeworkName, nil
 }
 
-func AttachNetworkToCosmos(newNeworkName string ) error {
+func AttachNetworkToCosmos(newNeworkName string) error {
 	utils.Log("Connecting Cosmos to network " + newNeworkName)
 	utils.Debug("HOSTNAME: " + os.Getenv("HOSTNAME"))
 	if utils.IsInsideContainer {
 		err := DockerClient.NetworkConnect(DockerContext, newNeworkName, os.Getenv("HOSTNAME"), &network.EndpointSettings{})
-	
+
 		if err != nil {
 			utils.Error("Docker Network Connect", err)
 			return err
@@ -190,9 +190,9 @@ func ConnectToSecureNetwork(containerConfig types.ContainerJSON) (bool, error) {
 	}
 
 	needsRestart := false
-	netName := "" 
+	netName := ""
 
-	if(!HasLabel(containerConfig, "cosmos-network-name")) {
+	if !HasLabel(containerConfig, "cosmos-network-name") {
 		newNetwork, errNC := CreateCosmosNetwork(containerConfig.Name[1:])
 		if errNC != nil {
 			utils.Error("DockerSecureNetworkCreate", errNC)
@@ -200,34 +200,34 @@ func ConnectToSecureNetwork(containerConfig types.ContainerJSON) (bool, error) {
 		}
 
 		utils.Log("Added label to new secure network for container: " + newNetwork)
-		
+
 		AddLabels(containerConfig, map[string]string{
 			"cosmos-network-name": newNetwork,
 		})
-		
+
 		needsRestart = true
 		netName = newNetwork
-		} else {
-			netName = GetLabel(containerConfig, "cosmos-network-name")
-			
-			//if network doesn't exists
-			_, err := DockerClient.NetworkInspect(DockerContext, netName, types.NetworkInspectOptions{})
-			if err != nil {
-				utils.Error("Container tries to connect to a non existing Cosmos network, resetting", err)
-				RemoveLabels(containerConfig, []string{"cosmos-network-name"})
-				return ConnectToSecureNetwork(containerConfig)
-			}
+	} else {
+		netName = GetLabel(containerConfig, "cosmos-network-name")
 
-			// else check if already connected
-			if(IsConnectedToNetwork(containerConfig, netName)) {
-				return false, nil
-			}
+		//if network doesn't exists
+		_, err := DockerClient.NetworkInspect(DockerContext, netName, types.NetworkInspectOptions{})
+		if err != nil {
+			utils.Error("Container tries to connect to a non existing Cosmos network, resetting", err)
+			RemoveLabels(containerConfig, []string{"cosmos-network-name"})
+			return ConnectToSecureNetwork(containerConfig)
+		}
+
+		// else check if already connected
+		if IsConnectedToNetwork(containerConfig, netName) {
+			return false, nil
+		}
 	}
 
 	// at this point network is created and container is not connected to it
-	
+
 	errCo := ConnectToNetworkSync(netName, containerConfig.ID)
-	
+
 	utils.Log("Created and connected to secure network: " + netName)
 
 	if errCo != nil {
@@ -252,12 +252,12 @@ func GetAllPorts(container types.ContainerJSON) []string {
 	for port, _ := range container.HostConfig.PortBindings {
 		ports = append(ports, port.Port())
 	}
-	
+
 	return ports
 }
 
 func IsConnectedToNetwork(containerConfig types.ContainerJSON, networkName string) bool {
-	if(containerConfig.NetworkSettings == nil) {
+	if containerConfig.NetworkSettings == nil {
 		return false
 		utils.Debug("IsConnectedToNetwork - " + containerConfig.Name + ": has no settings")
 	}
@@ -274,12 +274,12 @@ func IsConnectedToNetwork(containerConfig types.ContainerJSON, networkName strin
 }
 
 func IsConnectedToASecureCosmosNetwork(self types.ContainerJSON, containerConfig types.ContainerJSON) (bool, error, bool) {
-	if(containerConfig.NetworkSettings == nil) {
+	if containerConfig.NetworkSettings == nil {
 		utils.Error("IsConnectedToASecureCosmosNetwork: NetworkSettings is nil", nil)
 		return false, nil, false
 	}
 
-	if(!HasLabel(containerConfig, "cosmos-network-name")) {
+	if !HasLabel(containerConfig, "cosmos-network-name") {
 		return false, nil, false
 	}
 
@@ -287,7 +287,7 @@ func IsConnectedToASecureCosmosNetwork(self types.ContainerJSON, containerConfig
 	_, err := DockerClient.NetworkInspect(DockerContext, GetLabel(containerConfig, "cosmos-network-name"), types.NetworkInspectOptions{})
 	if err != nil {
 		utils.Error("Container tries to connect to a non existing Cosmos network, replacing it.", err)
-		
+
 		newNetwork, errNC := CreateCosmosNetwork(containerConfig.Name[1:])
 		if errNC != nil {
 			utils.Error("DockerSecureNetworkCreate", errNC)
@@ -310,7 +310,7 @@ func IsConnectedToASecureCosmosNetwork(self types.ContainerJSON, containerConfig
 			connected = true
 		}
 	}
-	if(!connected) {
+	if !connected {
 		utils.Warn("Container wasn't connected to the network it claimed, connecting it.")
 		err := ConnectToNetworkSync(GetLabel(containerConfig, "cosmos-network-name"), containerConfig.ID)
 		if err != nil {
@@ -322,7 +322,7 @@ func IsConnectedToASecureCosmosNetwork(self types.ContainerJSON, containerConfig
 	// else check if Cosmos is already connected
 	if utils.IsInsideContainer {
 		utils.Debug("IsSelfConnectedToASecureCosmosNetwork - " + self.Name + ": is connected to " + GetLabel(containerConfig, "cosmos-network-name"))
-		if(!IsConnectedToNetwork(self, GetLabel(containerConfig, "cosmos-network-name"))) {
+		if !IsConnectedToNetwork(self, GetLabel(containerConfig, "cosmos-network-name")) {
 			err := DockerClient.NetworkConnect(DockerContext, GetLabel(containerConfig, "cosmos-network-name"), os.Getenv("HOSTNAME"), &network.EndpointSettings{})
 			if err != nil {
 				utils.Error("Docker Network Connect EXISTING ", err)
@@ -334,7 +334,7 @@ func IsConnectedToASecureCosmosNetwork(self types.ContainerJSON, containerConfig
 }
 
 func ConnectToNetworkIfNotConnected(containerConfig types.ContainerJSON, networkName string) error {
-	if(IsConnectedToNetwork(containerConfig, networkName)) {
+	if IsConnectedToNetwork(containerConfig, networkName) {
 		return nil
 	}
 	return ConnectToNetworkSync(networkName, containerConfig.ID)
@@ -355,8 +355,8 @@ func ConnectToNetworkSync(networkName string, containerID string) error {
 			utils.Error("ConnectToNetworkSync", err)
 			return err
 		}
-		
-		if(IsConnectedToNetwork(newContainer, networkName)) {
+
+		if IsConnectedToNetwork(newContainer, networkName) {
 			break
 		}
 
@@ -366,9 +366,8 @@ func ConnectToNetworkSync(networkName string, containerID string) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	
 
-	utils.Log("Connected "+containerID+" to network: " + networkName)
+	utils.Log("Connected " + containerID + " to network: " + networkName)
 
 	return nil
 }
@@ -378,7 +377,7 @@ func _debounceNetworkCleanUp() func(string) {
 	var timer *time.Timer
 
 	return func(networkId string) {
-		if(networkId == "bridge" || networkId == "host" || networkId == "none") {
+		if networkId == "bridge" || networkId == "host" || networkId == "none" {
 			return
 		}
 
@@ -404,8 +403,8 @@ func CreateLinkNetwork(containerName string, container2Name string) error {
 	_, err = DockerClient.NetworkCreate(DockerContext, networkName, types.NetworkCreate{
 		CheckDuplicate: true,
 		Labels: map[string]string{
-			"cosmos-link": "true",
-			"cosmos-link-name": networkName,
+			"cosmos-link":            "true",
+			"cosmos-link-name":       networkName,
 			"cosmos-link-container1": containerName,
 			"cosmos-link-container2": container2Name,
 		},
@@ -444,11 +443,11 @@ var DebouncedNetworkCleanUp = _debounceNetworkCleanUp()
 
 func NetworkCleanUp() {
 	config := utils.GetMainConfig()
-	
-	DockerNetworkLock <- true
-	defer func() { <-DockerNetworkLock }()	
 
-	if(!config.DockerConfig.SkipPruneNetwork) {
+	DockerNetworkLock <- true
+	defer func() { <-DockerNetworkLock }()
+
+	if !config.DockerConfig.SkipPruneNetwork {
 		// list all networks
 		networks, err := DockerClient.NetworkList(DockerContext, types.NetworkListOptions{})
 		if err != nil {
@@ -482,7 +481,7 @@ func NetworkCleanUp() {
 
 			if delete {
 				utils.Log("Removing non-attached network: " + network.Name)
-				
+
 				err := DockerClient.NetworkRemove(DockerContext, network.ID)
 
 				if err != nil {
@@ -491,14 +490,14 @@ func NetworkCleanUp() {
 			}
 		}
 	}
-	
-	if(!config.DockerConfig.SkipPruneImages) {
+
+	if !config.DockerConfig.SkipPruneImages {
 		pruneFilters := filters.NewArgs()
 		report, err := DockerClient.ImagesPrune(DockerContext, pruneFilters)
 		if err != nil {
 			utils.Error("[DOCKER] Error pruning images", err)
 		}
-		
+
 		utils.Log("Pruned images: " + fmt.Sprintf("%v", report.ImagesDeleted))
 	}
 }

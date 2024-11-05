@@ -1,18 +1,18 @@
 package docker
 
 import (
+	"bufio"
 	"context"
+	"encoding/binary"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
-	"bufio"
-	"io"
 	"strings"
-	"encoding/binary"
 
+	"github.com/azukaar/cosmos-server/src/utils"
 	conttype "github.com/docker/docker/api/types/container"
 	"github.com/gorilla/mux"
-	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 type LogOutput struct {
@@ -24,7 +24,7 @@ type LogOutput struct {
 // ParseDockerLogHeader parses the first 8 bytes of a Docker log message
 // and returns the stream type, size, and the rest of the message as output.
 // It also checks if the message contains a log header and extracts the log message from it.
-func ParseDockerLogHeader(data []byte) (LogOutput) {
+func ParseDockerLogHeader(data []byte) LogOutput {
 	var logOutput LogOutput
 	logOutput.StreamType = 1 // assume stdout if header not present
 	logOutput.Size = uint32(len(data))
@@ -37,10 +37,10 @@ func ParseDockerLogHeader(data []byte) (LogOutput) {
 	// check if the output contains a log header
 	hasHeader := true
 	streamType := data[0]
-	if(!(streamType >= 0 && streamType <= 2)) {
+	if !(streamType >= 0 && streamType <= 2) {
 		hasHeader = false
 	}
-	if(data[1] != 0 || data[2] != 0 || data[3] != 0) {
+	if data[1] != 0 || data[2] != 0 || data[3] != 0 {
 		hasHeader = false
 	}
 	if hasHeader {
@@ -53,7 +53,7 @@ func ParseDockerLogHeader(data []byte) (LogOutput) {
 		logOutput.Size = size
 		logOutput.Output = output
 	}
-		
+
 	return logOutput
 }
 

@@ -1,44 +1,44 @@
-package metrics 
+package metrics
 
 import (
-	"time"
 	"strconv"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	
+
 	"github.com/azukaar/cosmos-server/src/utils"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DataDef struct {
-	Max uint64 
-	Period time.Duration
-	Label string
-	AggloType string
-	SetOperation string
-	Scale int
-	Unit string
-	Decumulate bool
+	Max           uint64
+	Period        time.Duration
+	Label         string
+	AggloType     string
+	SetOperation  string
+	Scale         int
+	Unit          string
+	Decumulate    bool
 	DecumulatePos bool
-	Object string
+	Object        string
 }
 
 type DataPush struct {
-	Date time.Time
-	Key string
-	Value int
-	Max uint64
-	Period time.Duration
-	Expire time.Time
-	Label string
-	AvgIndex int
-	AggloType string
-	Scale int
-	Unit string
-	Decumulate bool
+	Date          time.Time
+	Key           string
+	Value         int
+	Max           uint64
+	Period        time.Duration
+	Expire        time.Time
+	Label         string
+	AvgIndex      int
+	AggloType     string
+	Scale         int
+	Unit          string
+	Decumulate    bool
 	DecumulatePos bool
-	Object string
+	Object        string
 }
 
 var dataBuffer = map[string]DataPush{}
@@ -50,8 +50,8 @@ func GetDataBuffer() map[string]DataPush {
 }
 
 func MergeMetric(SetOperation string, currentValue int, newValue int, avgIndex int) int {
-	if SetOperation == "" {  
-		return newValue    
+	if SetOperation == "" {
+		return newValue
 	} else if SetOperation == "max" {
 		if newValue > currentValue {
 			return newValue
@@ -71,7 +71,7 @@ func MergeMetric(SetOperation string, currentValue int, newValue int, avgIndex i
 			avgIndex = 1
 			return newValue
 		} else {
-			return (currentValue * (avgIndex) + newValue) / (avgIndex + 1)
+			return (currentValue*(avgIndex) + newValue) / (avgIndex + 1)
 		}
 	} else {
 		return newValue
@@ -104,36 +104,35 @@ func SaveMetrics() {
 
 			filter := bson.M{"Key": dp.Key}
 			update := bson.M{
-				"$push": bson.M{"Values": 
-					bson.M{
-						"Date": dp.Date,
-						"Value": dp.Value,
-					},
+				"$push": bson.M{"Values": bson.M{
+					"Date":  dp.Date,
+					"Value": dp.Value,
+				},
 				},
 				"$set": bson.M{
 					"LastUpdate": dp.Date,
-					"Max": dp.Max,
-					"Label": dp.Label,
-					"AggloType": dp.AggloType,
-					"Scale": scale,
-					"Unit": dp.Unit,
-					"Object": dp.Object,
-					"TimeScale": float64(dp.Period / (time.Second * 30)),
+					"Max":        dp.Max,
+					"Label":      dp.Label,
+					"AggloType":  dp.AggloType,
+					"Scale":      scale,
+					"Unit":       dp.Unit,
+					"Object":     dp.Object,
+					"TimeScale":  float64(dp.Period / (time.Second * 30)),
 				},
 			}
 
 			CheckAlerts(dp.Key, "latest", utils.AlertMetricTrack{
-				Key: dp.Key,
+				Key:    dp.Key,
 				Object: dp.Object,
-				Max: dp.Max,
+				Max:    dp.Max,
 			}, dp.Value)
-			
+
 			// Create a new UpdateOneModel
 			operation := mongo.NewUpdateOneModel()
 			operation.SetFilter(filter)
 			operation.SetUpdate(update)
 			operation.SetUpsert(true)
-			
+
 			// Append to operations
 			operations = append(operations, operation)
 		}
@@ -183,11 +182,9 @@ func PushSetMetric(key string, value int, def DataDef) {
 				}
 			}
 		}
-		
-
 
 		if dp, ok := dataBuffer[cacheKey]; ok {
-			value = MergeMetric(def.SetOperation, dp.Value, value, dp.AvgIndex)    
+			value = MergeMetric(def.SetOperation, dp.Value, value, dp.AvgIndex)
 
 			dp.Max = def.Max
 			dp.Value = value
@@ -198,17 +195,17 @@ func PushSetMetric(key string, value int, def DataDef) {
 			dataBuffer[cacheKey] = dp
 		} else {
 			dataBuffer[cacheKey] = DataPush{
-				Date:   date,
-				Expire: ModuloTime(time.Now().Add(def.Period), def.Period),
-				Key:    key,
-				Value:  value,
-				Max:    def.Max,
-				Label:  def.Label,
+				Date:      date,
+				Expire:    ModuloTime(time.Now().Add(def.Period), def.Period),
+				Key:       key,
+				Value:     value,
+				Max:       def.Max,
+				Label:     def.Label,
 				AggloType: def.AggloType,
-				Scale: def.Scale,
-				Unit: def.Unit,
-				Object: def.Object,
-				Period: def.Period,
+				Scale:     def.Scale,
+				Unit:      def.Unit,
+				Object:    def.Object,
+				Period:    def.Period,
 			}
 		}
 
@@ -220,15 +217,14 @@ func Run() {
 	nextTime := ModuloTime(time.Now().Add(time.Second*30), time.Second*30)
 	nextTime = nextTime.Add(time.Second * 2)
 
-	
 	if utils.GetMainConfig().MonitoringDisabled {
 		time.AfterFunc(nextTime.Sub(time.Now()), func() {
 			Run()
 		})
-		
+
 		return
 	}
-	
+
 	utils.Debug("Metrics - Run - Next run at " + nextTime.String())
 
 	time.AfterFunc(nextTime.Sub(time.Now()), func() {

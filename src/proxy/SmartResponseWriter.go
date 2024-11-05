@@ -1,31 +1,31 @@
 package proxy
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils"
 	"bufio"
+	"errors"
+	"fmt"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"net"
 	"net/http"
 	"time"
-	"fmt"
-	"errors"
 )
 
 type SmartResponseWriterWrapper struct {
 	http.ResponseWriter
-	ClientID string
-	Status   int
-	Bytes    int64
-	ThrottleNext int
-	TimeStarted time.Time
-	TimeEnded time.Time
-	RequestCost int
-	Method string
-	shield *smartShieldState
-	policy utils.SmartShieldPolicy
-	isOver bool
+	ClientID           string
+	Status             int
+	Bytes              int64
+	ThrottleNext       int
+	TimeStarted        time.Time
+	TimeEnded          time.Time
+	RequestCost        int
+	Method             string
+	shield             *smartShieldState
+	policy             utils.SmartShieldPolicy
+	isOver             bool
 	hasBeenInterrupted bool
-	isPrivileged bool
-	shieldID string
+	isPrivileged       bool
+	shieldID           string
 }
 
 func (w *SmartResponseWriterWrapper) IsOver() bool {
@@ -84,7 +84,7 @@ func (w *SmartResponseWriterWrapper) Write(p []byte) (int, error) {
 	if thro > 0 {
 		time.Sleep(time.Duration(thro) * time.Millisecond)
 	}
-	
+
 	n, err := w.ResponseWriter.Write(p)
 
 	if err != nil {
@@ -111,4 +111,3 @@ func (w *SmartResponseWriterWrapper) Flush() {
 		flusher.Flush()
 	}
 }
-

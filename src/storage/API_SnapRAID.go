@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"net/http"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"net/http"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 )
@@ -41,31 +41,31 @@ func SnapRAIDRunRoute(w http.ResponseWriter, req *http.Request) {
 						"status": "OK",
 					})
 					return
-				}	else if action == "enable" {
+				} else if action == "enable" {
 					ToggleSnapRAID(snap.Name, true)
 					json.NewEncoder(w).Encode(map[string]interface{}{
 						"status": "OK",
 					})
 					return
-				}	else if action == "disable" {
+				} else if action == "disable" {
 					ToggleSnapRAID(snap.Name, false)
 					json.NewEncoder(w).Encode(map[string]interface{}{
 						"status": "OK",
 					})
 					return
-				}	else {
-					utils.Error("SnapRAIDRun: Invalid action " + action, nil)
+				} else {
+					utils.Error("SnapRAIDRun: Invalid action "+action, nil)
 					utils.HTTPError(w, "Invalid action", http.StatusBadRequest, "SNP001")
 					return
 				}
 			}
 		}
-		
-		utils.Error("SnapRAIDRun: SnapRAID not found " + name, nil)
+
+		utils.Error("SnapRAIDRun: SnapRAID not found "+name, nil)
 		utils.HTTPError(w, "SnapRAID not found", http.StatusNotFound, "SNP002")
 		return
 	} else {
-		utils.Error("UnmountRoute: Method not allowed " + req.Method, nil)
+		utils.Error("UnmountRoute: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

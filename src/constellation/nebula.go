@@ -1,19 +1,19 @@
 package constellation
 
 import (
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"os/exec"
-	"os"
-	"fmt"
-	"errors"
-	"runtime"
-	"sync"
-	"gopkg.in/yaml.v2"
-	"strings"
-	"io/ioutil"
-	"strconv"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/azukaar/cosmos-server/src/utils"
+	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/natefinch/lumberjack"
@@ -22,8 +22,8 @@ import (
 var logBuffer *lumberjack.Logger
 
 var (
-	process    *exec.Cmd
-	ProcessMux sync.Mutex
+	process               *exec.Cmd
+	ProcessMux            sync.Mutex
 	ConstellationInitLock sync.Mutex
 )
 
@@ -68,7 +68,7 @@ func startNebulaInBackground() error {
 	}
 
 	logBuffer = &lumberjack.Logger{
-		Filename:   utils.CONFIGFOLDER+"nebula.log",
+		Filename:   utils.CONFIGFOLDER + "nebula.log",
 		MaxSize:    1, // megabytes
 		MaxBackups: 1,
 		MaxAge:     15, //days
@@ -109,17 +109,17 @@ func startNebulaInBackground() error {
 func monitorNebulaProcess(proc *exec.Cmd) {
 	err := proc.Wait()
 	if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() && status.Signal() == syscall.SIGKILL {
-					utils.Warn("Constellation process killed.")
-				} else {
-					NebulaFailedStarting = true
-					utils.MajorError("Constellation process exited with an error. See logs", exitErr)
-				}
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() && status.Signal() == syscall.SIGKILL {
+				utils.Warn("Constellation process killed.")
 			} else {
 				NebulaFailedStarting = true
-				utils.MajorError("Constellation process exited with an error. See logs", err)
+				utils.MajorError("Constellation process exited with an error. See logs", exitErr)
 			}
+		} else {
+			NebulaFailedStarting = true
+			utils.MajorError("Constellation process exited with an error. See logs", err)
+		}
 	}
 
 	// The process has stopped, so update the global state
@@ -128,7 +128,6 @@ func monitorNebulaProcess(proc *exec.Cmd) {
 	process = nil
 	NebulaStarted = false
 }
-
 
 func stop() error {
 	ProcessMux.Lock()
@@ -174,16 +173,16 @@ func ResetNebula() error {
 	// remove everything in db
 
 	c, closeDb, err := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
-  defer closeDb()
+	defer closeDb()
 	if err != nil {
-			return err
+		return err
 	}
 
 	_, err = c.DeleteMany(nil, map[string]interface{}{})
 	if err != nil {
 		return err
 	}
-	
+
 	config := utils.ReadConfigFromFile()
 	config.ConstellationConfig.Enabled = false
 	config.ConstellationConfig.SlaveMode = false
@@ -198,7 +197,7 @@ func ResetNebula() error {
 
 func GetAllLightHouses() ([]utils.ConstellationDevice, error) {
 	c, closeDb, err := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
-  defer closeDb()
+	defer closeDb()
 	if err != nil {
 		return []utils.ConstellationDevice{}, err
 	}
@@ -207,7 +206,7 @@ func GetAllLightHouses() ([]utils.ConstellationDevice, error) {
 
 	cursor, err := c.Find(nil, map[string]interface{}{
 		"IsLighthouse": true,
-		"Blocked": false,
+		"Blocked":      false,
 	})
 	defer cursor.Close(nil)
 	cursor.All(nil, &devices)
@@ -221,7 +220,7 @@ func GetAllLightHouses() ([]utils.ConstellationDevice, error) {
 
 func GetBlockedDevices() ([]utils.ConstellationDevice, error) {
 	c, closeDb, err := utils.GetEmbeddedCollection(utils.GetRootAppId(), "devices")
-  defer closeDb()
+	defer closeDb()
 	if err != nil {
 		return []utils.ConstellationDevice{}, err
 	}
@@ -256,7 +255,7 @@ func ExportConfigToYAML(overwriteConfig utils.ConstellationConfig, outputPath st
 			// trim
 			hostname = strings.TrimSpace(hostname)
 			if hostname != "" {
-				hostnames = append(hostnames, hostname + ":4242")
+				hostnames = append(hostnames, hostname+":4242")
 			}
 		}
 
@@ -281,7 +280,7 @@ func ExportConfigToYAML(overwriteConfig utils.ConstellationConfig, outputPath st
 		for _, hostname := range strings.Split(l.PublicHostname, ",") {
 			hostname = strings.TrimSpace(hostname)
 			if hostname != "" {
-				finalConfig.StaticHostMap[cleanIp(l.IP)] = append(finalConfig.StaticHostMap[cleanIp(l.IP)], hostname + ":" + l.Port)
+				finalConfig.StaticHostMap[cleanIp(l.IP)] = append(finalConfig.StaticHostMap[cleanIp(l.IP)], hostname+":"+l.Port)
 			}
 		}
 	}
@@ -295,15 +294,15 @@ func ExportConfigToYAML(overwriteConfig utils.ConstellationConfig, outputPath st
 	for _, d := range blockedDevices {
 		finalConfig.PKI.Blocklist = append(finalConfig.PKI.Blocklist, d.Fingerprint)
 	}
-	
+
 	finalConfig.Lighthouse.AMLighthouse = !overwriteConfig.PrivateNode
 
 	finalConfig.Lighthouse.Hosts = []string{}
-	// add other lighthouses 
+	// add other lighthouses
 	// if !finalConfig.Lighthouse.AMLighthouse {
-		for _, l := range lh {
-			finalConfig.Lighthouse.Hosts = append(finalConfig.Lighthouse.Hosts, cleanIp(l.IP))
-		}
+	for _, l := range lh {
+		finalConfig.Lighthouse.Hosts = append(finalConfig.Lighthouse.Hosts, cleanIp(l.IP))
+	}
 	// }
 
 	finalConfig.Relay.AMRelay = overwriteConfig.NebulaConfig.Relay.AMRelay
@@ -349,7 +348,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Unmarshal the YAML data into a map interface
 	var configMap map[string]interface{}
 	err = yaml.Unmarshal(yamlData, &configMap)
@@ -374,13 +373,13 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 				// trim
 				hostname = strings.TrimSpace(hostname)
 				if hostname != "" {
-					hostnames = append(hostnames, hostname + ":4242")
+					hostnames = append(hostnames, hostname+":4242")
 				}
 			}
 
 			staticHostMap["192.168.201.1"] = hostnames
 		}
-		
+
 		for _, l := range lh {
 			staticHostMap[cleanIp(l.IP)] = []string{
 				// l.PublicHostname + ":" + l.Port,
@@ -388,7 +387,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 
 			for _, hostname := range strings.Split(l.PublicHostname, ",") {
 				hostname = strings.TrimSpace(hostname)
-				staticHostMap[cleanIp(l.IP)] = append(staticHostMap[cleanIp(l.IP)].([]string), hostname + ":" + l.Port)
+				staticHostMap[cleanIp(l.IP)] = append(staticHostMap[cleanIp(l.IP)].([]string), hostname+":"+l.Port)
 			}
 		}
 	} else {
@@ -398,7 +397,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 	// set lightHouse
 	if lighthouseMap, ok := configMap["lighthouse"].(map[interface{}]interface{}); ok {
 		lighthouseMap["am_lighthouse"] = device.IsLighthouse
-		
+
 		lighthouseMap["hosts"] = []string{}
 		if !device.IsLighthouse {
 			if !utils.GetMainConfig().ConstellationConfig.PrivateNode {
@@ -439,7 +438,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 	} else {
 		return "", errors.New("relay not found in nebula.yml")
 	}
-	
+
 	if listen, ok := configMap["listen"].(map[interface{}]interface{}); ok {
 		if device.Port != "" {
 			listen["port"] = device.Port
@@ -453,7 +452,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 	// configEndpoint := utils.GetServerURL("") + "cosmos/api/constellation/config-sync"
 
 	configHost := utils.GetServerURL("")
-	
+
 	if !utils.IsDomain(utils.GetMainConfig().HTTPConfig.Hostname) {
 		configHost = "http://192.168.201.1"
 
@@ -480,7 +479,6 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 		}
 	}
 
-
 	configHostProto := strings.Split(configHost, "://")[0] + "://"
 
 	configMap["cstln_device_name"] = name
@@ -500,7 +498,6 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 		configMap["cstln_licence"] = lic
 		utils.Log("Client license created for " + name)
 	}
-	
 
 	// list routes with a tunnel property matching the device name
 	routesList := utils.GetMainConfig().HTTPConfig.ProxyConfig.Routes
@@ -518,19 +515,19 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 			targetProtocol := strings.Split(route.Target, "://")[0]
 			if targetProtocol != "" && targetProtocol != "http" && targetProtocol != "https" && route.Mode != "STATIC" && route.Mode != "SPA" {
 				protocol = strings.Split(route.Target, "://")[0] + "://"
-			} 
-			
+			}
+
 			// extract port from target
 			if strings.Contains(route.Host, ":") {
 				_port := strings.Split(route.Host, ":")[1]
-					// if port is a number
-					if _, err := strconv.Atoi(_port); err == nil {
-						port = ":" + _port
+				// if port is a number
+				if _, err := strconv.Atoi(_port); err == nil {
+					port = ":" + _port
 				}
 			}
-			
+
 			route.UseHost = true
-			
+
 			route.Target = protocol + configHostname + port
 
 			if configMap["cstln_https_insecure"].(bool) {
@@ -548,7 +545,7 @@ func getYAMLClientConfig(name, configPath, capki, cert, key, APIKey string, devi
 
 	// lighten the config for QR Codes
 	// remove tun, firewall, punchy and logging
-	if(lite) {
+	if lite {
 		delete(configMap, "tun")
 		delete(configMap, "firewall")
 		delete(configMap, "punchy")
@@ -613,10 +610,10 @@ func killAllNebulaInstances() error {
 }
 
 func GetCertFingerprint(certPath string) (string, error) {
-	// nebula-cert print -json 
+	// nebula-cert print -json
 	var cmd *exec.Cmd
-	
-	cmd = exec.Command(binaryToRun() + "-cert",
+
+	cmd = exec.Command(binaryToRun()+"-cert",
 		"print",
 		"-json",
 		"-path", certPath,
@@ -648,12 +645,11 @@ func GetCertFingerprint(certPath string) (string, error) {
 func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, string, error) {
 	// Run the nebula-cert command
 	var cmd *exec.Cmd
-	
+
 	// Read the generated certificate and key files
 	certPath := fmt.Sprintf("./%s.crt", name)
 	keyPath := fmt.Sprintf("./%s.key", name)
 
-	
 	// if the temp exists, delete it
 	if _, err := os.Stat(certPath); err == nil {
 		os.Remove(certPath)
@@ -662,11 +658,11 @@ func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, s
 		os.Remove(keyPath)
 	}
 
-	if(PK == "") {
-		cmd = exec.Command(binaryToRun() + "-cert",
+	if PK == "" {
+		cmd = exec.Command(binaryToRun()+"-cert",
 			"sign",
-			"-ca-crt", utils.CONFIGFOLDER + "ca.crt",
-			"-ca-key", utils.CONFIGFOLDER + "ca.key",
+			"-ca-crt", utils.CONFIGFOLDER+"ca.crt",
+			"-ca-key", utils.CONFIGFOLDER+"ca.key",
 			"-name", name,
 			"-ip", ip,
 		)
@@ -676,10 +672,10 @@ func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, s
 		if err != nil {
 			return "", "", "", fmt.Errorf("failed to write temp.key: %s", err)
 		}
-		cmd = exec.Command(binaryToRun() + "-cert",
+		cmd = exec.Command(binaryToRun()+"-cert",
 			"sign",
-			"-ca-crt", utils.CONFIGFOLDER + "ca.crt",
-			"-ca-key", utils.CONFIGFOLDER + "ca.key",
+			"-ca-crt", utils.CONFIGFOLDER+"ca.crt",
+			"-ca-key", utils.CONFIGFOLDER+"ca.key",
 			"-name", name,
 			"-ip", ip,
 			"-in-pub", "./temp.key",
@@ -691,19 +687,18 @@ func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, s
 	utils.Debug(cmd.String())
 
 	cmd.Stderr = os.Stderr
-	
+
 	if utils.LoggingLevelLabels[utils.GetMainConfig().LoggingLevel] == utils.DEBUG {
 		cmd.Stdout = os.Stdout
 	} else {
 		cmd.Stdout = nil
 	}
-	
+
 	cmd.Run()
 
 	if cmd.ProcessState.ExitCode() != 0 {
 		return "", "", "", fmt.Errorf("nebula-cert exited with an error, check the Cosmos logs")
 	}
-
 
 	utils.Debug("Reading certificate from " + certPath)
 	utils.Debug("Reading key from " + keyPath)
@@ -724,10 +719,10 @@ func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, s
 	}
 
 	if saveToFile {
-		cmd = exec.Command("mv", certPath, utils.CONFIGFOLDER + name + ".crt")
+		cmd = exec.Command("mv", certPath, utils.CONFIGFOLDER+name+".crt")
 		utils.Debug(cmd.String())
 		cmd.Run()
-		cmd = exec.Command("mv", keyPath, utils.CONFIGFOLDER + name + ".key")
+		cmd = exec.Command("mv", keyPath, utils.CONFIGFOLDER+name+".key")
 		utils.Debug(cmd.String())
 		cmd.Run()
 	} else {
@@ -744,7 +739,7 @@ func generateNebulaCert(name, ip, PK string, saveToFile bool) (string, string, s
 	return string(certContent), string(keyContent), fingerprint, nil
 }
 
-func generateNebulaCACert(name string) (error) {
+func generateNebulaCACert(name string) error {
 	// if ca.key exists, delete it
 	if _, err := os.Stat("./ca.key"); err == nil {
 		os.Remove("./ca.key")
@@ -752,14 +747,14 @@ func generateNebulaCACert(name string) (error) {
 	if _, err := os.Stat("./ca.crt"); err == nil {
 		os.Remove("./ca.crt")
 	}
-	
+
 	// Run the nebula-cert command to generate CA certificate and key
-	cmd := exec.Command(binaryToRun() + "-cert", "ca", "-name", "\""+name+"\"")
+	cmd := exec.Command(binaryToRun()+"-cert", "ca", "-name", "\""+name+"\"")
 
 	utils.Debug(cmd.String())
 
 	cmd.Stderr = os.Stderr
-	
+
 	if utils.LoggingLevelLabels[utils.GetMainConfig().LoggingLevel] == utils.DEBUG {
 		cmd.Stdout = os.Stdout
 	} else {
@@ -769,11 +764,11 @@ func generateNebulaCACert(name string) (error) {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("nebula-cert error: %s", err)
 	}
-	
+
 	// copy to /config/ca.*
-	cmd = exec.Command("mv", "./ca.crt", utils.CONFIGFOLDER + "ca.crt")
+	cmd = exec.Command("mv", "./ca.crt", utils.CONFIGFOLDER+"ca.crt")
 	cmd.Run()
-	cmd = exec.Command("mv", "./ca.key", utils.CONFIGFOLDER + "ca.key")
+	cmd = exec.Command("mv", "./ca.key", utils.CONFIGFOLDER+"ca.key")
 	cmd.Run()
 
 	return nil

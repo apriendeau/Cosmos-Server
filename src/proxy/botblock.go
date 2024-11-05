@@ -28,7 +28,7 @@ var botUserAgents = []string{
 func BotDetectionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userAgent := r.UserAgent()
-		
+
 		if userAgent == "" {
 			go metrics.PushShieldMetrics("bots")
 			http.Error(w, "Access denied: Bots are not allowed.", http.StatusForbidden)
@@ -37,7 +37,7 @@ func BotDetectionMiddleware(next http.Handler) http.Handler {
 
 		for _, botUserAgent := range botUserAgents {
 			if userAgent == botUserAgent {
-			go metrics.PushShieldMetrics("bots")
+				go metrics.PushShieldMetrics("bots")
 				http.Error(w, "Access denied: Bots are not allowed.", http.StatusForbidden)
 				return
 			}

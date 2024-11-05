@@ -1,13 +1,13 @@
-package metrics 
+package metrics
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	
+
 	"github.com/azukaar/cosmos-server/src/utils"
 )
 
@@ -26,16 +26,15 @@ func API_GetMetrics(w http.ResponseWriter, req *http.Request) {
 		metricsList = strings.Split(metrics, ",")
 	}
 
-
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
-			"data": AggloMetrics(metricsList),
+			"data":   AggloMetrics(metricsList),
 		})
 	} else {
-		utils.Error("MetricsGet: Method not allowed" + req.Method, nil)
+		utils.Error("MetricsGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -48,7 +47,7 @@ func API_ResetMetrics(w http.ResponseWriter, req *http.Request) {
 
 	c, errCo := utils.GetCollection(utils.GetRootAppId(), "metrics")
 	if errCo != nil {
-		utils.Error("MetricsReset: Database error" , errCo)
+		utils.Error("MetricsReset: Database error", errCo)
 		utils.HTTPError(w, "Database error ", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -63,7 +62,7 @@ func API_ResetMetrics(w http.ResponseWriter, req *http.Request) {
 
 	c, errCo = utils.GetCollection(utils.GetRootAppId(), "events")
 	if errCo != nil {
-		utils.Error("MetricsReset: Database error" , errCo)
+		utils.Error("MetricsReset: Database error", errCo)
 		utils.HTTPError(w, "Database error ", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -76,19 +75,19 @@ func API_ResetMetrics(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 		})
 	} else {
-		utils.Error("SettingGet: Method not allowed" + req.Method, nil)
+		utils.Error("SettingGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
 
 type MetricList struct {
-	Key string
+	Key   string
 	Label string
 }
 
@@ -96,18 +95,18 @@ func ListMetrics(w http.ResponseWriter, req *http.Request) {
 	if utils.AdminOnly(w, req) != nil {
 		return
 	}
-	
-	if(req.Method == "GET") {
+
+	if req.Method == "GET" {
 		c, errCo := utils.GetCollection(utils.GetRootAppId(), "metrics")
 		if errCo != nil {
-				utils.Error("Database Connect", errCo)
-				utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-				return
+			utils.Error("Database Connect", errCo)
+			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+			return
 		}
 
 		metrics := []MetricList{}
 
-		cursor, err := c.Find(nil, map[string]interface{}{}, options.Find().SetProjection(bson.M{"Key": 1, "Label":1, "_id": 0}))
+		cursor, err := c.Find(nil, map[string]interface{}{}, options.Find().SetProjection(bson.M{"Key": 1, "Label": 1, "_id": 0}))
 		defer cursor.Close(nil)
 
 		if err != nil {
@@ -126,15 +125,15 @@ func ListMetrics(w http.ResponseWriter, req *http.Request) {
 		metricNames := map[string]string{}
 
 		for _, metric := range metrics {
-				metricNames[metric.Key] = metric.Label
+			metricNames[metric.Key] = metric.Label
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-				"status": "OK",
-				"data":   metricNames,
+			"status": "OK",
+			"data":   metricNames,
 		})
 	} else {
-		utils.Error("metrics: Method not allowed" + req.Method, nil)
+		utils.Error("metrics: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

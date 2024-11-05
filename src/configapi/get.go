@@ -1,11 +1,11 @@
 package configapi
 
 import (
-	"net/http"
 	"encoding/json"
-	"os"
+	"github.com/azukaar/cosmos-server/src/utils"
 	"io/ioutil"
-	"github.com/azukaar/cosmos-server/src/utils" 
+	"net/http"
+	"os"
 )
 
 func ConfigApiGet(w http.ResponseWriter, req *http.Request) {
@@ -15,7 +15,7 @@ func ConfigApiGet(w http.ResponseWriter, req *http.Request) {
 
 	isAdmin := utils.IsAdmin(req)
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		config := utils.ReadConfigFromFile()
 
 		// delete AuthPrivateKey and TLSKey
@@ -44,14 +44,14 @@ func ConfigApiGet(w http.ResponseWriter, req *http.Request) {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "OK",
-			"data": config,
-			"updates": utils.UpdateAvailable,
+			"status":   "OK",
+			"data":     config,
+			"updates":  utils.UpdateAvailable,
 			"hostname": os.Getenv("HOSTNAME"),
-			"isAdmin": isAdmin,
+			"isAdmin":  isAdmin,
 		})
 	} else {
-		utils.Error("SettingGet: Method not allowed" + req.Method, nil)
+		utils.Error("SettingGet: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
@@ -91,7 +91,7 @@ func BackupFileApiGet(w http.ResponseWriter, req *http.Request) {
 		}
 
 	} else {
-		utils.Error("BackupFileApiGet: Method not allowed " + req.Method, nil)
+		utils.Error("BackupFileApiGet: Method not allowed "+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

@@ -1,21 +1,21 @@
 package constellation
 
 import (
-	"time"
+	"io/ioutil"
 	"strconv"
 	"strings"
-	"io/ioutil"
+	"time"
 
+	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/miekg/dns"
-	"github.com/azukaar/cosmos-server/src/utils" 
 )
 
 var DNSBlacklist = map[string]bool{}
 
 func externalLookup(client *dns.Client, r *dns.Msg, serverAddr string) (*dns.Msg, time.Duration, error) {
-	rCopy := r.Copy() // Create a copy of the request to forward
+	rCopy := r.Copy()   // Create a copy of the request to forward
 	rCopy.Id = dns.Id() // Assign a new ID for the forwarded request
-	
+
 	// Enable DNSSEC
 	rCopy.SetEdns0(4096, true)
 	rCopy.CheckingDisabled = false
@@ -42,7 +42,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	hostnames := utils.GetAllHostnames(false, true)
 
 	utils.Debug("DNS Request from " + w.RemoteAddr().String() + " for " + r.Question[0].Name)
-	
+
 	if !customHandled {
 		customDNSEntries := config.ConstellationConfig.CustomDNSEntries
 
@@ -52,7 +52,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 				hostname := entry.Key
 				ip := entry.Value
 
-				if strings.HasSuffix(q.Name, hostname + ".") && q.Qtype == dns.TypeA {
+				if strings.HasSuffix(q.Name, hostname+".") && q.Qtype == dns.TypeA {
 					utils.Debug("DNS Overwrite " + hostname + " with " + ip)
 					rr, _ := dns.NewRR(q.Name + " A " + ip)
 					m.Answer = append(m.Answer, rr)
@@ -71,7 +71,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 				destination = strings.ReplaceAll(destination, "/24", "")
 
 				if destination != "" {
-					if strings.HasSuffix(q.Name, hostname + ".") && q.Qtype == dns.TypeA {
+					if strings.HasSuffix(q.Name, hostname+".") && q.Qtype == dns.TypeA {
 						utils.Debug("DNS Overwrite " + hostname + " with " + destination)
 						rr, _ := dns.NewRR(q.Name + " A " + destination)
 						m.Answer = append(m.Answer, rr)
@@ -81,13 +81,13 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 			}
 		}
 	}
-	
+
 	if !customHandled {
 		// Overwrite local hostnames with their Constellation IP
 		for _, q := range r.Question {
 			utils.Debug("DNS Question " + q.Name)
 			for _, hostname := range hostnames {
-				if strings.HasSuffix(q.Name, hostname + ".") && q.Qtype == dns.TypeA {
+				if strings.HasSuffix(q.Name, hostname+".") && q.Qtype == dns.TypeA {
 					utils.Debug("DNS Overwrite " + hostname + " with 192.168.201.1")
 					rr, _ := dns.NewRR(q.Name + " A 192.168.201.1")
 					m.Answer = append(m.Answer, rr)
@@ -96,7 +96,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 			}
 		}
 	}
-	
+
 	if !customHandled {
 		// Overwrite Constellation devices with Constellation IP
 		for _, q := range r.Question {
@@ -104,8 +104,8 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 			for deviceName, ip := range CachedDeviceNames {
 				procDeviceName := strings.ReplaceAll(deviceName, " ", "-")
 				ip = strings.ReplaceAll(ip, "/24", "")
-				
-				if strings.HasSuffix(q.Name, procDeviceName + ".") && q.Qtype == dns.TypeA {
+
+				if strings.HasSuffix(q.Name, procDeviceName+".") && q.Qtype == dns.TypeA {
 					utils.Debug("DNS Overwrite " + procDeviceName + " with its IP")
 					rr, _ := dns.NewRR(q.Name + " A " + ip)
 					m.Answer = append(m.Answer, rr)
@@ -125,7 +125,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 					rr, _ := dns.NewRR(q.Name + " A 0.0.0.0")
 					m.Answer = append(m.Answer, rr)
 				}
-				
+
 				customHandled = true
 			}
 		}
@@ -139,8 +139,8 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 			utils.Error("Failed to forward query:", err)
 			return
 		}
-		utils.Debug("DNS Forwarded DNS query to "+DNSFallback+" in " + time.String())
-		
+		utils.Debug("DNS Forwarded DNS query to " + DNSFallback + " in " + time.String())
+
 		externalResponse.Id = r.Id
 
 		m = externalResponse
@@ -186,8 +186,7 @@ func InitDNS() {
 
 	ConstellationInitLock.Lock()
 	defer ConstellationInitLock.Unlock()
-	
-	
+
 	config := utils.GetMainConfig()
 	DNSPort := config.ConstellationConfig.DNSPort
 	DNSBlockBlacklist := config.ConstellationConfig.DNSBlockBlacklist
@@ -224,11 +223,11 @@ func InitDNS() {
 				loadRawBlockList(DNSBlacklistRaw)
 			}
 		}
-		
+
 		utils.Log("Loaded " + strconv.Itoa(len(DNSBlacklist)) + " domains")
 	}
 
-	if(!config.ConstellationConfig.DNSDisabled) {
+	if !config.ConstellationConfig.DNSDisabled {
 		utils.Log("Initializing Constellation DNS")
 
 		go (func() {
@@ -237,19 +236,19 @@ func InitDNS() {
 
 			utils.Log("Starting DNS server on :" + DNSPort)
 			var err error
-			
+
 			DNSStarted = true
 
-			err = server.ListenAndServe();
+			err = server.ListenAndServe()
 			retries := 0
 
 			for err != nil && retries < 4 {
-				time.Sleep(time.Duration(2 * (retries + 1)) * time.Second)
-				err = server.ListenAndServe();
+				time.Sleep(time.Duration(2*(retries+1)) * time.Second)
+				err = server.ListenAndServe()
 				retries++
 				utils.Debug("Retrying to start DNS server")
 			}
-			
+
 			if err != nil {
 				utils.MajorError("Failed to start DNS server", err)
 				DNSStarted = false

@@ -1,32 +1,32 @@
 package utils
 
 import (
-	"encoding/json"
-	"math/rand"
-	"regexp"
-	"net/http"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"math/rand"
+	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
-	"io/ioutil"
-	"fmt"
 	"sync"
 	"time"
-	"errors"
-	"path/filepath"
-	"os/exec"
 
 	osnet "net"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/net"
-	"golang.org/x/net/publicsuffix"
 	"github.com/Masterminds/semver"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/net/publicsuffix"
 )
 
 var ConfigLock sync.Mutex
@@ -59,18 +59,17 @@ var CONFIGFOLDER = "/var/lib/cosmos/"
 var IsInsideContainer = false
 
 var DefaultConfig = Config{
-	LoggingLevel: "INFO",
-	NewInstall:   true,
-	AutoUpdate:	  true,
-	BlockedCountries: []string{
-	},
+	LoggingLevel:     "INFO",
+	NewInstall:       true,
+	AutoUpdate:       true,
+	BlockedCountries: []string{},
 	HTTPConfig: HTTPConfig{
 		HTTPSCertificateMode:    "DISABLED",
 		GenerateMissingAuthCert: true,
 		HTTPPort:                "80",
 		HTTPSPort:               "443",
 		Hostname:                "0.0.0.0",
-		PublishMDNS:						 true,
+		PublishMDNS:             true,
 		ProxyConfig: ProxyConfig{
 			Routes: []ProxyRouteConfig{},
 		},
@@ -78,119 +77,118 @@ var DefaultConfig = Config{
 	DockerConfig: DockerConfig{
 		DefaultDataPath: "/usr",
 	},
-  MarketConfig: MarketConfig{
-    Sources: []MarketSource{
-		},
+	MarketConfig: MarketConfig{
+		Sources: []MarketSource{},
 	},
-  ConstellationConfig: ConstellationConfig{
-    Enabled: false,
+	ConstellationConfig: ConstellationConfig{
+		Enabled:     false,
 		DNSDisabled: false,
 		DNSFallback: "8.8.8.8:53",
 		DNSAdditionalBlocklists: []string{
 			"https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt",
-      "https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt",
-      "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-      "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-only/hosts",
+			"https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt",
+			"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+			"https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-only/hosts",
 		},
 	},
-  MonitoringAlerts: map[string]Alert{
-    "Anti Crypto-Miner": {
-      Name: "Anti Crypto-Miner",
-      Enabled: false,
-      Period: "daily",
-      TrackingMetric: "cosmos.system.docker.cpu.*",
-			LastTriggered: time.Time{},
-      Condition: AlertCondition {
-        Operator: "gt",
-        Value: 80,
-        Percent: false,
-      },
-      Actions: []AlertAction {
-				AlertAction {
-          Type: "notification",
-          Target: "",
-        },
-        AlertAction {
-          Type: "email",
-          Target: "",
-        },
-        AlertAction {
-          Type: "stop",
-          Target: "",
-        },
+	MonitoringAlerts: map[string]Alert{
+		"Anti Crypto-Miner": {
+			Name:           "Anti Crypto-Miner",
+			Enabled:        false,
+			Period:         "daily",
+			TrackingMetric: "cosmos.system.docker.cpu.*",
+			LastTriggered:  time.Time{},
+			Condition: AlertCondition{
+				Operator: "gt",
+				Value:    80,
+				Percent:  false,
 			},
-      Throttled: false,
-      Severity: "warn",
-    },
-    "Anti Memory Leak": {
-      Name: "Anti Memory Leak",
-      Enabled: false,
-      Period: "daily",
-      TrackingMetric: "cosmos.system.docker.ram.*",
-			LastTriggered: time.Time{},
-      Condition: AlertCondition {
-        Operator: "gt",
-        Value: 80,
-        Percent: true,
-      },
-      Actions: []AlertAction {
-        {
-          Type: "notification",
-          Target: "",
-        },
-        {
-          Type: "email",
-          Target: "",
-        },
-        {
-          Type: "stop",
-          Target: "",
-        },
-      },
-      Throttled: false,
-      Severity: "warn",
-    },
-    "Disk Health": {
-      Name: "Disk Health",
-      Enabled: true,
-      Period: "latest",
-      TrackingMetric: "system.disk-health.temperature.*",
-			LastTriggered: time.Time{},
-      Condition: AlertCondition {
-        Operator: "gt",
-        Value: 50,
-        Percent: false,
-      },
-      Actions: []AlertAction {
-        {
-          Type: "notification",
-          Target: "",
-        },
-      },
-      Throttled: true,
-      Severity: "warn",
-    },
-    "Disk Full Notification": {
-      Name: "Disk Full Notification",
-      Enabled: true,
-      Period: "latest",
-      TrackingMetric: "cosmos.system.disk./",
-			LastTriggered: time.Time{},
-      Condition: AlertCondition {
-        Operator: "gt",
-        Value: 95,
-        Percent: true,
-      },
-      Actions: []AlertAction {
-        {
-          Type: "notification",
-          Target: "",
-        },
+			Actions: []AlertAction{
+				AlertAction{
+					Type:   "notification",
+					Target: "",
+				},
+				AlertAction{
+					Type:   "email",
+					Target: "",
+				},
+				AlertAction{
+					Type:   "stop",
+					Target: "",
+				},
 			},
-      Throttled: true,
-      Severity: "warn",
-    },
-  },
+			Throttled: false,
+			Severity:  "warn",
+		},
+		"Anti Memory Leak": {
+			Name:           "Anti Memory Leak",
+			Enabled:        false,
+			Period:         "daily",
+			TrackingMetric: "cosmos.system.docker.ram.*",
+			LastTriggered:  time.Time{},
+			Condition: AlertCondition{
+				Operator: "gt",
+				Value:    80,
+				Percent:  true,
+			},
+			Actions: []AlertAction{
+				{
+					Type:   "notification",
+					Target: "",
+				},
+				{
+					Type:   "email",
+					Target: "",
+				},
+				{
+					Type:   "stop",
+					Target: "",
+				},
+			},
+			Throttled: false,
+			Severity:  "warn",
+		},
+		"Disk Health": {
+			Name:           "Disk Health",
+			Enabled:        true,
+			Period:         "latest",
+			TrackingMetric: "system.disk-health.temperature.*",
+			LastTriggered:  time.Time{},
+			Condition: AlertCondition{
+				Operator: "gt",
+				Value:    50,
+				Percent:  false,
+			},
+			Actions: []AlertAction{
+				{
+					Type:   "notification",
+					Target: "",
+				},
+			},
+			Throttled: true,
+			Severity:  "warn",
+		},
+		"Disk Full Notification": {
+			Name:           "Disk Full Notification",
+			Enabled:        true,
+			Period:         "latest",
+			TrackingMetric: "cosmos.system.disk./",
+			LastTriggered:  time.Time{},
+			Condition: AlertCondition{
+				Operator: "gt",
+				Value:    95,
+				Percent:  true,
+			},
+			Actions: []AlertAction{
+				{
+					Type:   "notification",
+					Target: "",
+				},
+			},
+			Throttled: true,
+			Severity:  "warn",
+		},
+	},
 }
 
 func FileExists(path string) bool {
@@ -268,18 +266,18 @@ func ReadConfigFromFile() Config {
 
 	// check file is not empty
 	if err != nil {
-		// check error is not empty 
+		// check error is not empty
 		if err.Error() == "EOF" {
 			Fatal("Reading Config File: File is empty.", err)
 		}
 
-		// get error string 
+		// get error string
 		errString := err.Error()
 
 		// replace string in error
 		m1 := regexp.MustCompile(`json: cannot unmarshal ([A-Za-z\.]+) into Go struct field ([A-Za-z\.]+) of type ([A-Za-z\.]+)`)
 		errString = m1.ReplaceAllString(errString, "Invalid JSON in config file.\n > Field $2 is wrong.\n > Type is $1 Should be $3")
-		Fatal("Reading Config File: " + errString, err)
+		Fatal("Reading Config File: "+errString, err)
 	}
 
 	return config
@@ -331,7 +329,7 @@ func LoadBaseMainConfig(config Config) {
 		Log("Overwriting config folder with " + os.Getenv("COSMOS_CONFIG_FOLDER"))
 		CONFIGFOLDER = os.Getenv("COSMOS_CONFIG_FOLDER")
 	}
-	
+
 	if MainConfig.DockerConfig.DefaultDataPath == "" {
 		MainConfig.DockerConfig.DefaultDataPath = "/usr"
 	}
@@ -359,7 +357,7 @@ func GetConfigFileName() string {
 	} else if IsInsideContainer {
 		CONFIGFOLDER = "/config/"
 	}
-	
+
 	configFile := os.Getenv("CONFIG_FILE")
 
 	if configFile == "" {
@@ -428,12 +426,12 @@ func RestartServer() {
 
 func LetsEncryptValidOnly(hostnames []string, acceptWildcard bool) []string {
 	wrongPattern := `^(localhost(:\d+)?|(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?|.*\.local(:\d+)?)$`
-	
+
 	re, _ := regexp.Compile(wrongPattern)
 
 	var validDomains []string
 	for _, domain := range hostnames {
-		if !re.MatchString(domain) && (acceptWildcard || !strings.Contains(domain, "*")) && !strings.Contains(domain, " ")  && !strings.Contains(domain, "::") && !strings.Contains(domain, ",") {
+		if !re.MatchString(domain) && (acceptWildcard || !strings.Contains(domain, "*")) && !strings.Contains(domain, " ") && !strings.Contains(domain, "::") && !strings.Contains(domain, ",") {
 			validDomains = append(validDomains, domain)
 		} else {
 			Warn("Invalid domain found in URLs: " + domain + " it was removed from the certificate to not break Let's Encrypt")
@@ -482,7 +480,7 @@ func GetAllHostnames(applyWildCard bool, removePorts bool) []string {
 
 	proxies := GetMainConfig().ConstellationConfig.Tunnels
 	proxies = append(proxies, GetMainConfig().HTTPConfig.ProxyConfig.Routes...)
-	
+
 	for _, proxy := range proxies {
 		if proxy.UseHost && proxy.Host != "" && !strings.Contains(proxy.Host, ",") && !strings.Contains(proxy.Host, " ") {
 			if removePorts {
@@ -513,12 +511,12 @@ func GetAllHostnames(applyWildCard bool, removePorts bool) []string {
 			"*." + bareMainHostname,
 		}
 
-		if(OverrideWildcardDomains != "") {
+		if OverrideWildcardDomains != "" {
 			filteredHostnames = strings.Split(OverrideWildcardDomains, ",")
 		}
 
 		// hardcode wildcard for local domains
-		if(MainConfig.HTTPConfig.HTTPSCertificateMode == HTTPSCertModeList["SELFSIGNED"]) {
+		if MainConfig.HTTPConfig.HTTPSCertificateMode == HTTPSCertModeList["SELFSIGNED"] {
 			for _, domain := range append(uniqueHostnames, filteredHostnames...) {
 				if strings.HasSuffix(domain, ".local") {
 					filteredHostnames = append(filteredHostnames, "*.local")
@@ -558,7 +556,7 @@ func GetAllTunnelHostnames() map[string]string {
 	config := GetMainConfig()
 	tunnels := config.HTTPConfig.ProxyConfig.Routes
 	results := map[string]string{}
-	
+
 	for _, tunnel := range tunnels {
 		if tunnel.TunnelVia != "" && tunnel.TunneledHost != "" {
 			results[strings.Split(tunnel.TunneledHost, ":")[0]] = tunnel.TunnelVia
@@ -632,7 +630,7 @@ func GetServerURL(overwriteHostname string) string {
 	} else {
 		ServerURL += MainConfig.HTTPConfig.Hostname
 	}
-	
+
 	if IsHTTPS && MainConfig.HTTPConfig.HTTPSPort != "443" {
 		ServerURL += ":" + MainConfig.HTTPConfig.HTTPSPort
 	}
@@ -657,7 +655,7 @@ func ImageToBase64(path string) (string, error) {
 	}
 	defer imageFile.Close()
 
-	imageData, err := ioutil.ReadAll(imageFile)
+	imageData, err := io.ReadAll(imageFile)
 	if err != nil {
 		return "", err
 	}
@@ -690,12 +688,12 @@ func Max(x, y int) int {
 	return x
 }
 
-func GetCPUUsage() ([]float64) {
+func GetCPUUsage() []float64 {
 	percentages, _ := cpu.Percent(time.Second, false)
 	return percentages
 }
 
-func GetRAMUsage() (uint64) {
+func GetRAMUsage() uint64 {
 	v, _ := mem.VirtualMemory()
 	return v.Used
 }
@@ -734,7 +732,7 @@ func GetDiskUsage() []DiskStatus {
 
 type NetworkStatus struct {
 	BytesSent uint64
-	BytesRecv  uint64
+	BytesRecv uint64
 }
 
 func GetNetworkUsage() NetworkStatus {
@@ -756,7 +754,7 @@ func GetNetworkUsage() NetworkStatus {
 		BytesSent: 0,
 		BytesRecv: 0,
 	}
-	
+
 	for i := range initialStat {
 		res.BytesSent += finalStat[i].BytesSent - initialStat[i].BytesSent
 		res.BytesRecv += finalStat[i].BytesRecv - initialStat[i].BytesRecv
@@ -771,12 +769,12 @@ func DownloadFile(url string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	
-	body, err := ioutil.ReadAll(resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(body), nil
 }
 
@@ -797,40 +795,40 @@ func IsDomain(domain string) bool {
 }
 
 func CheckHostNetwork() {
-  IsHostNetwork =	CheckDockerNetworkMode() == "host"
+	IsHostNetwork = CheckDockerNetworkMode() == "host"
 	Log("Cosmos IsHostNetwork: " + strconv.FormatBool(IsHostNetwork))
 }
 
 // compareSemver compares two semantic version strings.
 // Returns:
-//   0 if v1 == v2
-//   1 if v1 > v2
-//  -1 if v1 < v2
-//   error if there's a problem parsing either version string
+//
+//	 0 if v1 == v2
+//	 1 if v1 > v2
+//	-1 if v1 < v2
+//	 error if there's a problem parsing either version string
 func CompareSemver(v1, v2 string) (int, error) {
 	ver1, err := semver.NewVersion(v1)
 	if err != nil {
-		Error("compareSemver 1 " + v1, err)
+		Error("compareSemver 1 "+v1, err)
 		return 0, err
 	}
 
 	ver2, err := semver.NewVersion(v2)
 	if err != nil {
-		Error("compareSemver 2 " + v2, err)
+		Error("compareSemver 2 "+v2, err)
 		return 0, err
 	}
 
 	return ver1.Compare(ver2), nil
 }
 
-
 func CheckPassword(nickname, password string) error {
-	time.Sleep(time.Duration(rand.Float64()*1)*time.Second)
-	
+	time.Sleep(time.Duration(rand.Float64()*1) * time.Second)
+
 	c, closeDb, errCo := GetEmbeddedCollection(GetRootAppId(), "users")
 	defer closeDb()
 	if errCo != nil {
-			return errCo
+		return errCo
 	}
 
 	user := User{}
@@ -839,7 +837,6 @@ func CheckPassword(nickname, password string) error {
 		"Nickname": nickname,
 	}).Decode(&user)
 
-	
 	if err3 == mongo.ErrNoDocuments {
 		bcrypt.CompareHashAndPassword([]byte("$2a$14$4nzsVwEnR3.jEbMTME7kqeCo4gMgR/Tuk7ivNExvXjr73nKvLgHka"), []byte("dummyPassword"))
 		return err3
@@ -862,7 +859,7 @@ func CheckPassword(nickname, password string) error {
 func Values[M ~map[K]V, K comparable, V any](m M) []V {
 	r := make([]V, 0, len(m))
 	for _, v := range m {
-			r = append(r, v)
+		r = append(r, v)
 	}
 	return r
 }
@@ -898,19 +895,19 @@ func IsConstellationIP(ip string) bool {
 		return true
 	}
 
-	return false 
+	return false
 }
 
 func SplitIP(ipPort string) (string, string) {
 	host, port, err := osnet.SplitHostPort(ipPort)
 	if err != nil {
-			// If there was an error splitting host and port, try parsing as IP only
-			if ip := osnet.ParseIP(ipPort); ip != nil {
-					// If it's a valid IP, return it with an empty port
-					return ip.String(), ""
-			}
-			// Otherwise, return an empty IP and port (indicating an invalid input)
-			return "", ""
+		// If there was an error splitting host and port, try parsing as IP only
+		if ip := osnet.ParseIP(ipPort); ip != nil {
+			// If it's a valid IP, return it with an empty port
+			return ip.String(), ""
+		}
+		// Otherwise, return an empty IP and port (indicating an invalid input)
+		return "", ""
 	}
 	return host, port
 }
@@ -925,37 +922,37 @@ func ListIps(skipNebula bool) ([]string, error) {
 	result := []string{}
 	// Iterate over all interfaces.
 	for _, iface := range interfaces {
-			// skip nebula1 interface 
-			if skipNebula && strings.HasPrefix(iface.Name, "nebula") {
-				continue
-			}
+		// skip nebula1 interface
+		if skipNebula && strings.HasPrefix(iface.Name, "nebula") {
+			continue
+		}
 
-			// skip docker interfaces
-			if strings.HasPrefix(iface.Name, "docker") || strings.HasPrefix(iface.Name, "br-") || strings.HasPrefix(iface.Name, "veth") || strings.HasPrefix(iface.Name, "virbr") {
-				continue
-			}
-			
-			// Get a list of addresses associated with the interface.
-			addrs, err := iface.Addrs()
-			if err != nil {
-				Warn("Error getting addresses for interface " + iface.Name + ": " + err.Error())
-					continue
-			}
+		// skip docker interfaces
+		if strings.HasPrefix(iface.Name, "docker") || strings.HasPrefix(iface.Name, "br-") || strings.HasPrefix(iface.Name, "veth") || strings.HasPrefix(iface.Name, "virbr") {
+			continue
+		}
 
-			// Iterate over all addresses.
-			for _, addr := range addrs {
-					// Check if the address is an IP address and not a mask.
-					if ipnet, ok := addr.(*osnet.IPNet); ok && !ipnet.IP.IsLoopback() {
-							if ipnet.IP.To4() != nil {
-								// if not duplicate
-								if !StringArrayContains(result, ipnet.IP.String()) {
-									result = append(result, ipnet.IP.String())
-								}
-							} else if ipnet.IP.To16() != nil {
-								// ignore for now
-							}
+		// Get a list of addresses associated with the interface.
+		addrs, err := iface.Addrs()
+		if err != nil {
+			Warn("Error getting addresses for interface " + iface.Name + ": " + err.Error())
+			continue
+		}
+
+		// Iterate over all addresses.
+		for _, addr := range addrs {
+			// Check if the address is an IP address and not a mask.
+			if ipnet, ok := addr.(*osnet.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					// if not duplicate
+					if !StringArrayContains(result, ipnet.IP.String()) {
+						result = append(result, ipnet.IP.String())
 					}
+				} else if ipnet.IP.To16() != nil {
+					// ignore for now
+				}
 			}
+		}
 	}
 
 	// TODO sort, local first

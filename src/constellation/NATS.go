@@ -1,12 +1,12 @@
 package constellation
 
 import (
-	"time"
+	"crypto/tls"
 	"errors"
 	"strconv"
-	"sync"
 	"strings"
-	"crypto/tls"
+	"sync"
+	"time"
 
 	"encoding/pem"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/nats-io/nats.go"
 
 	"github.com/azukaar/cosmos-server/src/utils"
-	
+
 	natsClient "github.com/nats-io/nats.go"
 )
 
@@ -36,16 +36,16 @@ func StartNATS() {
 	if ns != nil {
 		return
 	}
-	
+
 	utils.Log("Starting NATS server...")
 
 	time.Sleep(2 * time.Second)
-	
+
 	config := utils.GetMainConfig()
 	HTTPConfig := config.HTTPConfig
 
 	var tlsCert = HTTPConfig.TLSCert
-	var tlsKey= HTTPConfig.TLSKey
+	var tlsKey = HTTPConfig.TLSKey
 
 	// Ensure the PEM data is correctly formatted
 	certPEMBlock := []byte(tlsCert)
@@ -54,44 +54,44 @@ func StartNATS() {
 	// Decode PEM encoded certificate
 	certDERBlock, _ := pem.Decode(certPEMBlock)
 	if certDERBlock == nil {
-			utils.MajorError("Failed to start NATS: parse certificate PEM", nil)
+		utils.MajorError("Failed to start NATS: parse certificate PEM", nil)
 	}
 
 	// Decode PEM encoded private key
 	keyDERBlock, _ := pem.Decode(keyPEMBlock)
 	if keyDERBlock == nil {
-			utils.MajorError("Failed to start NATS: parse key PEM", nil)
+		utils.MajorError("Failed to start NATS: parse key PEM", nil)
 	}
 
 	// Create tls.Certificate using the original PEM data
 	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 	if err != nil {
-			utils.MajorError("Failed to start NATS: create TLS certificate", err)
+		utils.MajorError("Failed to start NATS: create TLS certificate", err)
 	}
 
 	// Configure the NATS server options
 	// Make users
-	
+
 	users := []*server.User{
 		&server.User{
-			Username: MASTERUSER,
-			Password: MASTERPWD,
+			Username:    MASTERUSER,
+			Password:    MASTERPWD,
 			Permissions: nil,
 		},
 	}
 
 	for _, devices := range CachedDevices {
 		username := sanitizeNATSUsername(devices.DeviceName)
-		
+
 		users = append(users, &server.User{
 			Username: username,
 			Password: devices.APIKey,
 			Permissions: &server.Permissions{
 				Publish: &server.SubjectPermission{
-						Allow: []string{"cosmos."+username+".>", "_INBOX.>"},
+					Allow: []string{"cosmos." + username + ".>", "_INBOX.>"},
 				},
 				Subscribe: &server.SubjectPermission{
-						Allow: []string{"cosmos."+username+".>", "_INBOX.>"},
+					Allow: []string{"cosmos." + username + ".>", "_INBOX.>"},
 				},
 			},
 		})
@@ -102,8 +102,8 @@ func StartNATS() {
 		Port: 4222,
 
 		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.NoClientCert,
+			Certificates:       []tls.Certificate{cert},
+			ClientAuth:         tls.NoClientCert,
 			InsecureSkipVerify: true,
 		},
 
@@ -128,7 +128,7 @@ func StartNATS() {
 		go ns.Start()
 
 		// Wait for the server to be ready
-		if !ns.ReadyForConnections(time.Duration(2 * (retries + 1)) * time.Second) {
+		if !ns.ReadyForConnections(time.Duration(2*(retries+1)) * time.Second) {
 			retries++
 			utils.Debug("NATS server not ready...")
 			err = errors.New("NATS server not ready")
@@ -162,6 +162,7 @@ func StopNATS() {
 var clientConfigLock = sync.Mutex{}
 var NATSClientTopic = ""
 var nc *nats.Conn
+
 func InitNATSClient() {
 	if nc != nil {
 		return
@@ -179,12 +180,12 @@ func InitNATSClient() {
 	}
 
 	utils.Log("Connecting to NATS server...")
-	
+
 	time.Sleep(2 * time.Second)
-	
+
 	user, pwd, err := GetNATSCredentials(!utils.GetMainConfig().ConstellationConfig.SlaveMode)
 	user = sanitizeNATSUsername(user)
-	
+
 	if err != nil {
 		utils.MajorError("Error getting constellation credentials", err)
 		return
@@ -195,7 +196,7 @@ func InitNATSClient() {
 		// nats.DisconnectHandler(func(nc *nats.Conn) {
 		// 		utils.Log("Disconnected from NATS server - trying to reconnect")
 		// }),
-	
+
 		nats.Secure(&tls.Config{
 			InsecureSkipVerify: true,
 		}),
@@ -207,7 +208,7 @@ func InitNATSClient() {
 		if retries == 10 {
 			utils.MajorError("Error connecting to Constellation NATS server (timeout) - will continue trying", err)
 		}
-		
+
 		if retries >= 11 {
 			retries = 11
 		}
@@ -217,7 +218,7 @@ func InitNATSClient() {
 			return
 		}
 
-		time.Sleep(time.Duration(2 * (retries + 1)) * time.Second)
+		time.Sleep(time.Duration(2*(retries+1)) * time.Second)
 
 		nc, err = natsClient.Connect("nats://192.168.201.1:4222",
 			nats.Secure(&tls.Config{
@@ -229,7 +230,7 @@ func InitNATSClient() {
 			// timeout
 			nats.Timeout(2*time.Second),
 		)
-		
+
 		if err != nil {
 			retries++
 			utils.Debug("Retrying to start NATS Client: " + err.Error())
@@ -251,7 +252,7 @@ func InitNATSClient() {
 	} else {
 		clientConfigLock.Unlock()
 		go SlaveNATSClientRouter()
-		SendNATSMessage("cosmos."+user+".debug", "NATS Client connected as " + user)
+		SendNATSMessage("cosmos."+user+".debug", "NATS Client connected as "+user)
 		RequestSyncPayload()
 		clientConfigLock.Lock()
 	}
@@ -296,7 +297,7 @@ func SendNATSMessage(topic string, payload string) (string, error) {
 		return "", err
 	}
 
-	utils.Debug("[MQ] Received response: " +  string(msg.Data))
+	utils.Debug("[MQ] Received response: " + string(msg.Data))
 
 	return string(msg.Data), nil
 }
@@ -330,7 +331,7 @@ func MasterNATSClientRouter() {
 	for _, devices := range CachedDevices {
 		localDevice := devices
 		username := sanitizeNATSUsername(localDevice.DeviceName)
-		
+
 		nc.Subscribe("cosmos."+username+".debug", func(m *nats.Msg) {
 			utils.Debug("[MQ] Received: " + string(m.Data))
 			m.Respond([]byte("Received: " + string(m.Data)))
@@ -368,7 +369,7 @@ func SlaveNATSClientRouter() {
 
 	nc.Subscribe("cosmos."+username+".constellation.config.resync", func(m *nats.Msg) {
 		utils.Log("Constellation config changed, resyncing...")
-		
+
 		config := m.Data
 
 		needRestart, err := SlaveConfigSync((string)(config))
@@ -383,10 +384,10 @@ func SlaveNATSClientRouter() {
 			}
 		}
 	})
-	
+
 	nc.Subscribe("cosmos."+username+".constellation.data.sync-receive", func(m *nats.Msg) {
 		utils.Log("Constellation data sync received")
-		
+
 		payload := m.Data
 
 		ReceiveSyncPayload((string)(payload))

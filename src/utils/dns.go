@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"net"
 	"errors"
+	"net"
 	"strings"
 	// "fmt"
 	// "os"
@@ -10,11 +10,10 @@ import (
 
 func CheckDNS(url string) error {
 	Log("CheckDNS: " + url)
-	
+
 	realHostname := GetMainConfig().HTTPConfig.Hostname
 	realHostname = strings.Split(realHostname, ":")[0]
-	
-	
+
 	ips, err := net.LookupIP(url)
 	ipsReal, errReal := net.LookupIP(realHostname)
 

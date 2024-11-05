@@ -1,19 +1,19 @@
-package metrics 
+package metrics
 
 import (
-	"strings"
-	"regexp"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
-	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func CheckAlerts(TrackingMetric string, Period string, metric utils.AlertMetricTrack, Value int) {
 	config := utils.GetMainConfig()
 	ActiveAlerts := config.MonitoringAlerts
-	
+
 	alerts := []utils.Alert{}
 	ok := false
 
@@ -31,10 +31,10 @@ func CheckAlerts(TrackingMetric string, Period string, metric utils.AlertMetricT
 		}
 	} else {
 		for _, val := range ActiveAlerts {
-			if val.TrackingMetric == TrackingMetric  && val.Period == Period {
+			if val.TrackingMetric == TrackingMetric && val.Period == Period {
 				alerts = append(alerts, val)
 				ok = true
-				break 
+				break
 			}
 		}
 	}
@@ -48,11 +48,11 @@ func CheckAlerts(TrackingMetric string, Period string, metric utils.AlertMetricT
 			continue
 		}
 
-		if alert.Throttled && alert.LastTriggered.Add(time.Hour * 24).After(time.Now()) {
+		if alert.Throttled && alert.LastTriggered.Add(time.Hour*24).After(time.Now()) {
 			continue
 		}
-		
-		ValueToTest := Value 
+
+		ValueToTest := Value
 
 		if alert.Condition.Percent {
 			ValueToTest = int(float64(Value) / float64(metric.Max) * 100)
@@ -99,22 +99,21 @@ func ExecuteAllActions(alert utils.Alert, actions []utils.AlertAction, metric ut
 }
 
 func ExecuteAction(alert utils.Alert, action utils.AlertAction, metric utils.AlertMetricTrack) {
-	utils.Log("Executing action " + action.Type + " on " + metric.Key + " " + metric.Object	)
+	utils.Log("Executing action " + action.Type + " on " + metric.Key + " " + metric.Object)
 
-	
 	utils.TriggerEvent(
 		"cosmos.metrics.alert",
 		"Alert triggered",
 		alert.Severity,
 		"",
 		map[string]interface{}{
-			"alert": alert.Name,
-			"metric": metric.Key,
-			"object": metric.Object,
-			"action": action.Type,
+			"alert":    alert.Name,
+			"metric":   metric.Key,
+			"object":   metric.Object,
+			"action":   action.Type,
 			"severity": alert.Severity,
-			"actions": alert.Actions,
-	})
+			"actions":  alert.Actions,
+		})
 
 	if action.Type == "email" {
 		utils.Debug("Sending email to " + action.Target)
@@ -123,8 +122,8 @@ func ExecuteAction(alert utils.Alert, action utils.AlertAction, metric utils.Ale
 			users := utils.ListAllUsers("admin")
 			for _, user := range users {
 				if user.Email != "" {
-					utils.SendEmail([]string{user.Email}, "Alert Triggered: " + alert.Name,
-					fmt.Sprintf(`<h1>Alert Triggered [%s]</h1>
+					utils.SendEmail([]string{user.Email}, "Alert Triggered: "+alert.Name,
+						fmt.Sprintf(`<h1>Alert Triggered [%s]</h1>
 You are recevining this email because you are admin on a Cosmos
 server where an Alert has been subscribed to.<br />
 You can manage your subscriptions in the Monitoring tab.<br />
@@ -166,7 +165,7 @@ more information.<br />`, alert.Severity, metric.Key))
 				}
 
 				if objectIndex != -1 {
-					config.HTTPConfig.ProxyConfig.Routes[objectIndex].Disabled = true		
+					config.HTTPConfig.ProxyConfig.Routes[objectIndex].Disabled = true
 
 					utils.SetBaseMainConfig(config)
 				} else {
@@ -182,11 +181,11 @@ more information.<br />`, alert.Severity, metric.Key))
 	} else if action.Type == "notification" {
 		utils.WriteNotification(utils.Notification{
 			Recipient: "admin",
-			Title: "header.notification.title.alertTriggered",
-			Message: "header.notification.message.alertTriggered",
-			Vars: alert.Name,
-			Level: alert.Severity,
-			Link: "/cosmos-ui/monitoring",
+			Title:     "header.notification.title.alertTriggered",
+			Message:   "header.notification.message.alertTriggered",
+			Vars:      alert.Name,
+			Level:     alert.Severity,
+			Link:      "/cosmos-ui/monitoring",
 		})
 
 	} else if action.Type == "script" {

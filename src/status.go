@@ -1,20 +1,20 @@
 package main
 
 import (
-	"net/http"
-	"encoding/json"
-	"runtime"
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
+	"net/http"
+	"runtime"
 
 	"golang.org/x/sys/cpu"
 
-	"github.com/azukaar/cosmos-server/src/utils" 
-	"github.com/azukaar/cosmos-server/src/docker" 
-	"github.com/azukaar/cosmos-server/src/proxy" 
-	"github.com/azukaar/cosmos-server/src/metrics" 
-	"github.com/azukaar/cosmos-server/src/market" 
-	"github.com/azukaar/cosmos-server/src/cron" 
+	"github.com/azukaar/cosmos-server/src/cron"
+	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/market"
+	"github.com/azukaar/cosmos-server/src/metrics"
+	"github.com/azukaar/cosmos-server/src/proxy"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func StatusRoute(w http.ResponseWriter, req *http.Request) {
@@ -24,11 +24,11 @@ func StatusRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		utils.Log("API: Status")
-		
+
 		if config.NewInstall {
-			if(!config.DisableUserManagement) {
+			if !config.DisableUserManagement {
 				err := utils.DB()
 				if err != nil {
 					utils.Error("Status: Database error", err)
@@ -38,14 +38,14 @@ func StatusRoute(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		if(!docker.DockerIsConnected) {
+		if !docker.DockerIsConnected {
 			ed := docker.Connect()
 			if ed != nil {
 				utils.Error("Status: Docker error", ed)
 			}
 		}
 
-		licenceValid := false 
+		licenceValid := false
 		if utils.FBL != nil && utils.FBL.LValid {
 			licenceValid = true
 		}
@@ -53,8 +53,8 @@ func StatusRoute(w http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 			"data": map[string]interface{}{
-				"homepage": config.HomepageConfig,
-				"theme": config.ThemeConfig,
+				"homepage":  config.HomepageConfig,
+				"theme":     config.ThemeConfig,
 				"resources": map[string]interface{}{
 					// "ram": utils.GetRAMUsage(),
 					// "ramFree": utils.GetAvailableRAM(),
@@ -62,34 +62,34 @@ func StatusRoute(w http.ResponseWriter, req *http.Request) {
 					// "disk": utils.GetDiskUsage(),
 					// "network": utils.GetNetworkUsage(),
 				},
-				"containerized": utils.IsInsideContainer,
-				"hostmode": utils.IsHostNetwork || !utils.IsInsideContainer || utils.GetMainConfig().DisableHostModeWarning,
-				"database": utils.DBStatus,
-				"docker": docker.DockerIsConnected,
-				"backup_status": docker.ExportError,
-				"letsencrypt": utils.GetMainConfig().HTTPConfig.HTTPSCertificateMode == "LETSENCRYPT" && utils.GetMainConfig().HTTPConfig.SSLEmail == "",
-				"domain": utils.GetMainConfig().HTTPConfig.Hostname == "localhost" || utils.GetMainConfig().HTTPConfig.Hostname == "0.0.0.0",
+				"containerized":        utils.IsInsideContainer,
+				"hostmode":             utils.IsHostNetwork || !utils.IsInsideContainer || utils.GetMainConfig().DisableHostModeWarning,
+				"database":             utils.DBStatus,
+				"docker":               docker.DockerIsConnected,
+				"backup_status":        docker.ExportError,
+				"letsencrypt":          utils.GetMainConfig().HTTPConfig.HTTPSCertificateMode == "LETSENCRYPT" && utils.GetMainConfig().HTTPConfig.SSLEmail == "",
+				"domain":               utils.GetMainConfig().HTTPConfig.Hostname == "localhost" || utils.GetMainConfig().HTTPConfig.Hostname == "0.0.0.0",
 				"HTTPSCertificateMode": utils.GetMainConfig().HTTPConfig.HTTPSCertificateMode,
-				"needsRestart": utils.NeedsRestart,
-				"newVersionAvailable": utils.NewVersionAvailable,
-				"hostname": utils.GetMainConfig().HTTPConfig.Hostname,
-				"allolocalip": utils.GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess,
-				"CPU": runtime.GOARCH,
-				"AVX": cpu.X86.HasAVX,
-				"LetsEncryptErrors": utils.LetsEncryptErrors,
-				"MonitoringDisabled": utils.GetMainConfig().MonitoringDisabled,
-				"Licence": licenceValid,
+				"needsRestart":         utils.NeedsRestart,
+				"newVersionAvailable":  utils.NewVersionAvailable,
+				"hostname":             utils.GetMainConfig().HTTPConfig.Hostname,
+				"allolocalip":          utils.GetMainConfig().HTTPConfig.AllowHTTPLocalIPAccess,
+				"CPU":                  runtime.GOARCH,
+				"AVX":                  cpu.X86.HasAVX,
+				"LetsEncryptErrors":    utils.LetsEncryptErrors,
+				"MonitoringDisabled":   utils.GetMainConfig().MonitoringDisabled,
+				"Licence":              licenceValid,
 			},
 		})
 	} else {
-		utils.Error("UserList: Method not allowed" + req.Method, nil)
+		utils.Error("UserList: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
 
 func CanSendEmail(w http.ResponseWriter, req *http.Request) {
-	if(req.Method == "GET") {
+	if req.Method == "GET" {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 			"data": map[string]interface{}{
@@ -97,13 +97,13 @@ func CanSendEmail(w http.ResponseWriter, req *http.Request) {
 			},
 		})
 	} else {
-		utils.Error("UserList: Method not allowed" + req.Method, nil)
+		utils.Error("UserList: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}
 }
 
-func getRealSizeOf(v interface{}) (int) {
+func getRealSizeOf(v interface{}) int {
 	b := new(bytes.Buffer)
 	// if map return number of keys
 	if m, ok := v.(map[interface{}]interface{}); ok {
@@ -115,47 +115,46 @@ func getRealSizeOf(v interface{}) (int) {
 	}
 
 	if err := gob.NewEncoder(b).Encode(v); err != nil {
-			utils.Error("MemStatusRoute: Error encoding", err)
-			return 0
+		utils.Error("MemStatusRoute: Error encoding", err)
+		return 0
 	}
-	
+
 	return b.Len()
 }
-func getRealSizeOf2(v interface{}) (int) {
+func getRealSizeOf2(v interface{}) int {
 	b := new(bytes.Buffer)
 	if err := json.NewEncoder(b).Encode(v); err != nil {
-			utils.Error("MemStatusRoute: Error encoding", err)
-			return 0
+		utils.Error("MemStatusRoute: Error encoding", err)
+		return 0
 	}
-	
+
 	return b.Len()
 }
 
 func MemStatusRoute(w http.ResponseWriter, req *http.Request) {
-	if (utils.LoggedInOnly(w, req) != nil) {
+	if utils.LoggedInOnly(w, req) != nil {
 		return
 	}
 
-	if(req.Method == "GET") {
-
+	if req.Method == "GET" {
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "OK",
 			"data": map[string]interface{}{
-				"IconCache": getRealSizeOf(IconCache),
-				"UpdateAvailable": getRealSizeOf(utils.UpdateAvailable),
+				"IconCache":         getRealSizeOf(IconCache),
+				"UpdateAvailable":   getRealSizeOf(utils.UpdateAvailable),
 				"LetsEncryptErrors": getRealSizeOf(utils.LetsEncryptErrors),
-				"BannedIPs": getRealSizeOf2(utils.BannedIPs),
-				"WriteBuffer": getRealSizeOf2(utils.GetWriteBuffer()),
-				"Shield": proxy.GetShield(),
-				"ActiveProxies": getRealSizeOf2(proxy.GetActiveProxies()),
-				"Markets": getRealSizeOf(market.GetCachedMarket()),
-				"Metrics": getRealSizeOf(metrics.GetDataBuffer()),
-				"CRON": getRealSizeOf(cron.GetJobsList()),
+				"BannedIPs":         getRealSizeOf2(utils.BannedIPs),
+				"WriteBuffer":       getRealSizeOf2(utils.GetWriteBuffer()),
+				"Shield":            proxy.GetShield(),
+				"ActiveProxies":     getRealSizeOf2(proxy.GetActiveProxies()),
+				"Markets":           getRealSizeOf(market.GetCachedMarket()),
+				"Metrics":           getRealSizeOf(metrics.GetDataBuffer()),
+				"CRON":              getRealSizeOf(cron.GetJobsList()),
 			},
 		})
 	} else {
-		utils.Error("MemRoute: Method not allowed" + req.Method, nil)
+		utils.Error("MemRoute: Method not allowed"+req.Method, nil)
 		utils.HTTPError(w, "Method not allowed", http.StatusMethodNotAllowed, "HTTP001")
 		return
 	}

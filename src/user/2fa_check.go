@@ -18,7 +18,7 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 	}
 
 	nickname := req.Header.Get("x-cosmos-user")
-	
+
 	var request User2FACheckRequest
 	errD := json.NewDecoder(req.Body).Decode(&request)
 	if errD != nil {
@@ -29,7 +29,7 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
 	defer closeDb()
-	
+
 	if errCo != nil {
 		utils.Error("Database Connect", errCo)
 		utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
@@ -48,8 +48,8 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(userInBase.MFAKey == "") {
-		utils.Error("2FA: User " + nickname + " has no key", nil)
+	if userInBase.MFAKey == "" {
+		utils.Error("2FA: User "+nickname+" has no key", nil)
 		utils.HTTPError(w, "2FA Error", http.StatusInternalServerError, "2FA003")
 		return
 	}
@@ -59,7 +59,7 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 	if valid {
 		utils.Log("2FA: User " + nickname + " has valid token")
 
-		if(!userInBase.Was2FAVerified) {
+		if !userInBase.Was2FAVerified {
 			toSet := map[string]interface{}{
 				"Was2FAVerified": true,
 			}
@@ -69,7 +69,7 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 			}, map[string]interface{}{
 				"$set": toSet,
 			})
-		
+
 			if err != nil {
 				utils.Error("2FA: Cannot update user", err)
 				utils.HTTPError(w, "2FA Error", http.StatusInternalServerError, "2FA004")
@@ -83,7 +83,7 @@ func Check2FA(w http.ResponseWriter, req *http.Request) {
 			"status": "OK",
 		})
 	} else {
-		utils.Error("2FA: User " + nickname + " has invalid token", nil)
+		utils.Error("2FA: User "+nickname+" has invalid token", nil)
 		utils.HTTPError(w, "2FA Error", http.StatusInternalServerError, "2FA005")
 		return
 	}

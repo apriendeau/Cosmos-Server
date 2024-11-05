@@ -3,10 +3,10 @@ package proxy
 import (
 	"context"
 	"fmt"
-	"sync"
-	"time"
 	"net"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/holoplot/go-avahi"

@@ -16,7 +16,7 @@ type SyncPayload struct {
 
 func MakeSyncPayload() string {
 	utils.Log("Constellation: MakeSyncPayload: Making sync payload")
-	
+
 	// Read database file
 	dbPath := utils.CONFIGFOLDER + "database"
 	dbData, err := ioutil.ReadFile(dbPath)
@@ -50,7 +50,7 @@ func MakeSyncPayload() string {
 
 func ReceiveSyncPayload(rawPayload string) {
 	utils.Log("Constellation: ReceiveSyncPayload: Received sync payload")
-	
+
 	var payload SyncPayload
 	err := json.Unmarshal([]byte(rawPayload), &payload)
 	if err != nil {
@@ -95,7 +95,6 @@ func ReceiveSyncPayload(rawPayload string) {
 		utils.RestartHTTPServer()
 	}()
 }
-
 
 func RequestSyncPayload() {
 	user, _, err := GetNATSCredentials(!utils.GetMainConfig().ConstellationConfig.SlaveMode)

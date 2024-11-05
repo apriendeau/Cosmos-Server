@@ -1,10 +1,10 @@
-package storage 
+package storage
 
 import (
-	"os"
 	"errors"
-	"strings"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 )
@@ -37,7 +37,7 @@ func MountMergerFS(paths []string, mountpoint string, opts string, permanent boo
 	}
 
 	// Execute the mount command
-	_, err := utils.Exec("mergerfs", "-o", "use_ino,cache.files=partial,dropcacheonclose=true,allow_other,category.create=mfs" + opts, strings.Join(paths, ":"), mountpoint)
+	_, err := utils.Exec("mergerfs", "-o", "use_ino,cache.files=partial,dropcacheonclose=true,allow_other,category.create=mfs"+opts, strings.Join(paths, ":"), mountpoint)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func MountMergerFS(paths []string, mountpoint string, opts string, permanent boo
 
 	if permanent {
 		utils.Log("[STORAGE] Adding mountpoint to /etc/fstab")
-		
+
 		// Check if mountpoint is already in /etc/fstab
 		exists, err := isMountPointInFstab(mountpoint)
 		if err != nil {

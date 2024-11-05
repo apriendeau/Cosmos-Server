@@ -1,8 +1,8 @@
 package authorizationserver
 
 import (
-	"net/http"
 	"github.com/azukaar/cosmos-server/src/utils"
+	"net/http"
 )
 
 func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {

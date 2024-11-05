@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"github.com/golang-jwt/jwt"
-	
+
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
 )
 
 type FirebaseApiSdk struct {
-	BaseURL string
-	LValid bool
+	BaseURL     string
+	LValid      bool
 	ServerToken string
 }
 
@@ -66,7 +67,7 @@ func _InitFBL() *FirebaseApiSdk {
 	if Licence == "" {
 		return res
 	}
-	
+
 	_, statuscode1, err1 := res.RenewLicense(ServerToken)
 
 	if err1 != nil {
@@ -77,7 +78,7 @@ func _InitFBL() *FirebaseApiSdk {
 
 			MajorError("Could not renew server token, check internet connection", err2)
 
-			if (ServerToken == "") {
+			if ServerToken == "" {
 				MajorError("No server token. And could not get one.", err2)
 				return res
 			}
@@ -127,7 +128,7 @@ func NewFirebaseApiSdk(baseURL string) *FirebaseApiSdk {
 
 func (sdk *FirebaseApiSdk) CreateClientLicense(clientID string) (string, error) {
 	payload := map[string]string{
-		"serverToken":	sdk.ServerToken,
+		"serverToken": sdk.ServerToken,
 		"clientId":    clientID,
 	}
 

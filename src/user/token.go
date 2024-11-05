@@ -1,14 +1,14 @@
 package user
 
 import (
-	"net/http"
+	"encoding/json"
+	"errors"
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/golang-jwt/jwt"
-	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
 )
 
 func shouldCookieBeSecured(ip string) bool {
@@ -34,7 +34,7 @@ func quickLoggout(w http.ResponseWriter, req *http.Request, err error) (utils.Us
 
 func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, error) {
 	config := utils.GetMainConfig()
-	
+
 	// if new install
 	if config.NewInstall {
 		// check route
@@ -53,13 +53,13 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 	if err != nil {
 		return utils.User{}, nil
 	}
-	
+
 	tokenString := cookie.Value
 
 	if tokenString == "" {
 		return utils.User{}, nil
 	}
-	
+
 	ed25519Key, errK := jwt.ParseEdPublicKeyFromPEM([]byte(utils.GetPublicAuthKey()))
 
 	if errK != nil {
@@ -69,7 +69,7 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 	}
 
 	parts := strings.Split(tokenString, ".")
-	
+
 	errT := jwt.SigningMethodEdDSA.Verify(strings.Join(parts[0:2], "."), parts[2], ed25519Key)
 
 	if errT != nil {
@@ -85,7 +85,7 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 	claims := jwt.MapClaims{}
 
 	_, errP := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-    return ed25519Key, nil
+		return ed25519Key, nil
 	})
 
 	if errP != nil {
@@ -108,7 +108,7 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 			return utils.User{}, e
 		}
 	}
-	
+
 	if passwordCycleFloat, ok := claims["passwordCycle"].(float64); ok {
 		passwordCycle = int(passwordCycleFloat)
 	} else {
@@ -116,7 +116,7 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 			return utils.User{}, e
 		}
 	}
-	
+
 	if mfaDone, ok = claims["mfaDone"].(bool); !ok {
 		if _, e := quickLoggout(w, req, nil); e != nil {
 			return utils.User{}, e
@@ -128,10 +128,10 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 			return utils.User{}, e
 		}
 	}
-	
+
 	reqHostname := req.Host
 	reqHostNoPort := strings.Split(reqHostname, ":")[0]
-	
+
 	if !strings.HasSuffix(reqHostNoPort, forDomain) {
 		utils.Error("UserToken: token is not valid for this domain", nil)
 		logOutUser(w, req)
@@ -142,18 +142,18 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 	userInBase := utils.User{}
 
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
-	
+	defer closeDb()
+
 	if errCo != nil {
-			utils.Error("Database Connect", errCo)
-			utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
-			return utils.User{}, errCo
+		utils.Error("Database Connect", errCo)
+		utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
+		return utils.User{}, errCo
 	}
 
 	errDB := c.FindOne(nil, map[string]interface{}{
 		"Nickname": nickname,
 	}).Decode(&userInBase)
-	
+
 	if errDB != nil {
 		utils.Error("UserToken: User not found", errDB)
 		logOutUser(w, req)
@@ -181,7 +181,7 @@ func RefreshUserToken(w http.ResponseWriter, req *http.Request) (utils.User, err
 		userInBase.MFAState = 2
 	}
 
-	if time.Now().Unix() - int64(claims["iat"].(float64)) > 3600 {
+	if time.Now().Unix()-int64(claims["iat"].(float64)) > 3600 {
 		SendUserToken(w, req, userInBase, mfaDone)
 	}
 
@@ -192,26 +192,25 @@ func GetUserR(req *http.Request) (string, string) {
 	return req.Header.Get("x-cosmos-user"), req.Header.Get("x-cosmos-role")
 }
 
-
 func logOutUser(w http.ResponseWriter, req *http.Request) {
 	reqHostname := req.Host
 	reqHostNoPort := strings.Split(reqHostname, ":")[0]
 
 	cookie := http.Cookie{
-		Name: "jwttoken",
-		Value: "",
-		Expires: time.Now().Add(-time.Hour * 24 * 365),
-		Path: "/",
-		Secure: shouldCookieBeSecured(req.RemoteAddr),
+		Name:     "jwttoken",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour * 24 * 365),
+		Path:     "/",
+		Secure:   shouldCookieBeSecured(req.RemoteAddr),
 		HttpOnly: true,
 	}
 
 	clientCookie := http.Cookie{
-		Name: "client-infos",
-		Value: "{}",
-		Expires: time.Now().Add(-time.Hour * 24 * 365),
-		Path: "/",
-		Secure: shouldCookieBeSecured(req.RemoteAddr),
+		Name:     "client-infos",
+		Value:    "{}",
+		Expires:  time.Now().Add(-time.Hour * 24 * 365),
+		Path:     "/",
+		Secure:   shouldCookieBeSecured(req.RemoteAddr),
 		HttpOnly: false,
 	}
 
@@ -230,15 +229,15 @@ func logOutUser(w http.ResponseWriter, req *http.Request) {
 }
 
 func redirectToReLogin(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, "/cosmos-ui/login?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	http.Redirect(w, req, "/cosmos-ui/login?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 }
 
 func redirectToLoginMFA(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	http.Redirect(w, req, "/cosmos-ui/loginmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 }
 
 func redirectToNewMFA(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect=" + req.URL.Path + "&" + req.URL.RawQuery, http.StatusTemporaryRedirect)
+	http.Redirect(w, req, "/cosmos-ui/newmfa?invalid=1&redirect="+req.URL.Path+"&"+req.URL.RawQuery, http.StatusTemporaryRedirect)
 }
 
 func SendUserToken(w http.ResponseWriter, req *http.Request, user utils.User, mfaDone bool) {
@@ -259,7 +258,7 @@ func SendUserToken(w http.ResponseWriter, req *http.Request, user utils.User, mf
 	claims["forDomain"] = reqHostNoPort
 
 	key, err5 := jwt.ParseEdPrivateKeyFromPEM([]byte(utils.GetPrivateAuthKey()))
-	
+
 	if err5 != nil {
 		utils.Error("UserLogin: Error while retrieving signing key", err5)
 		utils.HTTPError(w, "User Logging Error", http.StatusInternalServerError, "UL001")
@@ -275,20 +274,20 @@ func SendUserToken(w http.ResponseWriter, req *http.Request, user utils.User, mf
 	}
 
 	cookie := http.Cookie{
-		Name: "jwttoken",
-		Value: tokenString,
-		Expires: expiration,
-		Path: "/",
-		Secure: shouldCookieBeSecured(req.RemoteAddr),
+		Name:     "jwttoken",
+		Value:    tokenString,
+		Expires:  expiration,
+		Path:     "/",
+		Secure:   shouldCookieBeSecured(req.RemoteAddr),
 		HttpOnly: true,
 	}
 
 	clientCookie := http.Cookie{
-		Name: "client-infos",
-		Value: user.Nickname + "," + strconv.Itoa(int(user.Role)),
-		Expires: expiration,
-		Path: "/",
-		Secure: shouldCookieBeSecured(req.RemoteAddr),
+		Name:     "client-infos",
+		Value:    user.Nickname + "," + strconv.Itoa(int(user.Role)),
+		Expires:  expiration,
+		Path:     "/",
+		Secure:   shouldCookieBeSecured(req.RemoteAddr),
 		HttpOnly: false,
 	}
 

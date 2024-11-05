@@ -1,25 +1,25 @@
 package main
 
 import (
+	"context"
 	"math/rand"
 	"time"
-	"context"
 
-	"github.com/azukaar/cosmos-server/src/docker"
-	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/azukaar/cosmos-server/src/authorizationserver"
-	"github.com/azukaar/cosmos-server/src/market"
 	"github.com/azukaar/cosmos-server/src/constellation"
+	"github.com/azukaar/cosmos-server/src/cron"
+	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/market"
 	"github.com/azukaar/cosmos-server/src/metrics"
 	"github.com/azukaar/cosmos-server/src/storage"
-	"github.com/azukaar/cosmos-server/src/cron"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
 
 func main() {
 	utils.Log("------------------------------------------")
 	utils.Log("Starting Cosmos-Server version " + GetCosmosVersion())
 	utils.Log("------------------------------------------")
-	
+
 	// utils.ReBootstrapContainer = docker.BootstrapContainerFromTags
 	utils.PushShieldMetrics = metrics.PushShieldMetrics
 	utils.GetContainerIPByName = docker.GetContainerIPByName
@@ -29,13 +29,13 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	docker.IsInsideContainer()
-	
+
 	LoadConfig()
 
 	utils.RemovePIDFile()
 
 	utils.CheckHostNetwork()
-	
+
 	go CRON()
 
 	docker.ExportDocker()
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	config := utils.GetMainConfig()
-	
+
 	if !config.NewInstall {
 		MigratePre013()
 		MigratePre014()
@@ -75,7 +75,7 @@ func main() {
 		utils.Log("Starting market services...")
 
 		market.Init()
-		
+
 		utils.Log("Starting OpenID services...")
 
 		authorizationserver.Init()
@@ -87,7 +87,7 @@ func main() {
 		constellation.Init()
 
 		storage.InitSnapRAIDConfig()
-		
+
 		// Has to be done last, so scheduler does not re-init
 		cron.Init()
 

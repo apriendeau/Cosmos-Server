@@ -1,7 +1,7 @@
-package storage 
+package storage
 
 import (
-	// "github.com/azukaar/cosmos-server/src/utils"
+// "github.com/azukaar/cosmos-server/src/utils"
 )
 
 type DiskInfo struct {

@@ -1,30 +1,30 @@
 package utils
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"math/big"
-	"time"
-	"crypto/rand"
 	"crypto"
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"encoding/pem"
+	"math/big"
+	"net"
 	"os"
 	"strings"
-	"net"
-	
+	"time"
+
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
-	"github.com/go-acme/lego/v4/challenge/http01"
-	"github.com/go-acme/lego/v4/lego"
-	"github.com/go-acme/lego/v4/registration"
-	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
-	"github.com/go-acme/lego/v4/providers/dns"
 	"github.com/go-acme/lego/v4/challenge/dns01"
+	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
+	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/providers/dns"
+	"github.com/go-acme/lego/v4/registration"
 )
 
 func GenerateRSAWebCertificates(domains []string) (string, string) {
@@ -87,7 +87,6 @@ func GenerateRSAWebCertificates(domains []string) (string, string) {
 		CRLDistributionPoints: []string{},
 
 		PolicyIdentifiers: []asn1.ObjectIdentifier{},
-
 	}
 
 	// create certificate
@@ -115,7 +114,7 @@ func GenerateEd25519Certificates() (string, string) {
 	if err != nil {
 		Fatal("Generating ed25519 private Key", err)
 	}
-	
+
 	bpub, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		Fatal("Generating ed25519 public Key", err)
@@ -129,6 +128,7 @@ type CertUser struct {
 	Registration *registration.Resource
 	key          crypto.PrivateKey
 }
+
 func (u *CertUser) GetEmail() string {
 	return u.Email
 }
@@ -140,7 +140,6 @@ func (u CertUser) GetRegistration() *registration.Resource {
 func (u *CertUser) GetPrivateKey() crypto.PrivateKey {
 	return u.key
 }
-
 
 func DoLetsEncrypt() (string, string) {
 	config := GetMainConfig()
@@ -159,7 +158,7 @@ func DoLetsEncrypt() (string, string) {
 	}
 
 	certConfig := lego.NewConfig(&myUser)
-	
+
 	domains := GetAllHostnames(true, true)
 
 	if os.Getenv("ACME_STAGING") == "true" {
@@ -200,11 +199,11 @@ func DoLetsEncrypt() (string, string) {
 					}
 
 					nameservers, err := net.LookupNS(tld)
-					
+
 					if err != nil {
 						continue
 					}
-					
+
 					for _, ns := range nameservers {
 						resolvers = append(resolvers, ns.Host)
 					}

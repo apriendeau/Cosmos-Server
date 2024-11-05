@@ -1,22 +1,21 @@
 package proxy
 
 import (
-	"net/http"
-	"net/http/httputil" 
-	"net/url"
-	"strings"
-	"crypto/tls"
-	"os"
-	"io/ioutil"
-	"strconv"
-	"time"
 	"context"
+	"crypto/tls"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
-	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/azukaar/cosmos-server/src/docker"
+	"github.com/azukaar/cosmos-server/src/utils"
 )
-
 
 func singleJoiningSlash(a, b string) string {
 	aslash := strings.HasSuffix(a, "/")
@@ -51,26 +50,25 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	return a.Path + b.Path, apath + bpath
 }
 
-
 // NewProxy takes target host and creates a reverse proxy
 func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHardening bool, CORSOrigin string, route utils.ProxyRouteConfig) (*httputil.ReverseProxy, error) {
 	url, err := url.Parse(targetHost)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
-	
+
 	proxy.Director = func(req *http.Request) {
 		originalScheme := "http"
 		if utils.IsHTTPS {
 			originalScheme = "https"
 		}
-		
+
 		urlQuery := url.RawQuery
 		req.URL.Scheme = url.Scheme
 		req.URL.Host = url.Host
-		
+
 		if route.Mode == "SERVAPP" && (!utils.IsInsideContainer || utils.IsHostNetwork) {
 			targetHost := url.Hostname()
 
@@ -90,10 +88,10 @@ func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHa
 		} else {
 			req.URL.RawQuery = urlQuery + "&" + req.URL.RawQuery
 		}
-		
+
 		req.Header.Set("X-Forwarded-Proto", originalScheme)
-		
-		if(originalScheme == "https") {
+
+		if originalScheme == "https" {
 			req.Header.Set("X-Forwarded-Ssl", "on")
 		}
 
@@ -128,7 +126,7 @@ func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHa
 		// req.Host = hostDest
 
 		req.Header.Set("X-Forwarded-Host", hostDestNoPort)
-		
+
 		if hostPort != "" {
 			req.Header.Set("X-Forwarded-Port", hostPort)
 		}
@@ -138,13 +136,13 @@ func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHa
 			req.Header.Del("X-Forwarded-Port")
 			req.Header.Del("X-Forwarded-Host")
 			req.Header.Del("host")
-			
+
 			req.Header.Set("Host", req.URL.Host)
 			req.Host = req.URL.Host
 		}
 	}
 
-	customTransport :=  &http.Transport{}
+	customTransport := &http.Transport{}
 
 	if utils.GetMainConfig().ConstellationConfig.Enabled && utils.GetMainConfig().ConstellationConfig.SlaveMode {
 		customTransport = &http.Transport{
@@ -178,7 +176,7 @@ func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHa
 			resp.Header.Del("Access-Control-Allow-Origin")
 			resp.Header.Del("Access-Control-Allow-Credentials")
 		}
-		
+
 		if !DisableHeaderHardening {
 			resp.Header.Del("Strict-Transport-Security")
 			resp.Header.Del("X-Content-Type-Options")
@@ -200,7 +198,6 @@ func NewProxy(targetHost string, AcceptInsecureHTTPSTarget bool, DisableHeaderHa
 	return proxy, nil
 }
 
-
 func RouteTo(route utils.ProxyRouteConfig) http.Handler {
 	// initialize a reverse proxy and pass the actual backend server url here
 
@@ -213,19 +210,19 @@ func RouteTo(route utils.ProxyRouteConfig) http.Handler {
 		}
 	}
 
-  if(routeType == "SERVAPP" || routeType == "PROXY") {
+	if routeType == "SERVAPP" || routeType == "PROXY" {
 		proxy, err := NewProxy(destination, route.AcceptInsecureHTTPSTarget, route.DisableHeaderHardening, route.CORSOrigin, route)
 		if err != nil {
-				utils.Error("Create Route", err)
+			utils.Error("Create Route", err)
 		}
 
 		// create a handler function which uses the reverse proxy
 		return proxy
-	}  else if (routeType == "STATIC") {
+	} else if routeType == "STATIC" {
 		return http.FileServer(http.Dir(destination))
-	}  else if (routeType == "SPA") {
+	} else if routeType == "SPA" {
 		return utils.SPAHandler(destination)
-	} else if(routeType == "REDIRECT") {
+	} else if routeType == "REDIRECT" {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, destination, 302)
 		})

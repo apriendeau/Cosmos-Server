@@ -2,9 +2,9 @@ package user
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"time"
-	"math/rand"
 
 	"github.com/azukaar/cosmos-server/src/utils"
 	"github.com/pquerna/otp/totp"
@@ -14,7 +14,7 @@ func New2FA(w http.ResponseWriter, req *http.Request) {
 	if utils.LoggedInWeakOnly(w, req) != nil {
 		return
 	}
-	time.Sleep(time.Duration(rand.Float64()*2)*time.Second)
+	time.Sleep(time.Duration(rand.Float64()*2) * time.Second)
 
 	nickname := req.Header.Get("x-cosmos-user")
 
@@ -30,14 +30,14 @@ func New2FA(w http.ResponseWriter, req *http.Request) {
 	}
 
 	utils.Log("2FA: New key generated for " + nickname)
-	
+
 	toSet := map[string]interface{}{
-		"MFAKey": key.Secret(),
+		"MFAKey":         key.Secret(),
 		"Was2FAVerified": false,
 	}
 
 	c, closeDb, errCo := utils.GetEmbeddedCollection(utils.GetRootAppId(), "users")
-  defer closeDb()
+	defer closeDb()
 	if errCo != nil {
 		utils.Error("Database Connect", errCo)
 		utils.HTTPError(w, "Database", http.StatusInternalServerError, "DB001")
@@ -56,7 +56,7 @@ func New2FA(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if(userInBase.MFAKey != "" && userInBase.Was2FAVerified) {
+	if userInBase.MFAKey != "" && userInBase.Was2FAVerified {
 		if utils.LoggedInOnly(w, req) != nil {
 			return
 		}
